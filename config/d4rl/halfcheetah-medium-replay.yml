@@ -1,0 +1,6 @@
+max_adm_step: 2
+penalty_coef: 2.5
+
+auto_alpha: False
+actor_lr: 0.00007
+lr_schedule: False
