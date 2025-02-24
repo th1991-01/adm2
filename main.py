@@ -24,7 +24,7 @@ def get_args():
     parser.add_argument("--rollout-batch-size", type=int, default=4096)
     parser.add_argument("--rollout-length", type=int, default=1000)
     parser.add_argument("--load-model", type=bool, default=False)
-    parser.add_argument("--load-time", type=str, default="25-0206-230303")
+    parser.add_argument("--load-time", type=str, default="25-0224-100104")
     parser.add_argument("--load-seed", type=int, default=0)
     # only for any-step dyna model
     parser.add_argument("--max-adm-step", type=int, default=10)                         # maximum length of rnn input
@@ -66,7 +66,7 @@ def get_args():
     parser.add_argument("--warmup-steps", type=int, default=10)
     parser.add_argument("--n-epochs", type=int, default=3000)
     parser.add_argument("--step-per-epoch", type=int, default=24)
-    parser.add_argument("--updates-per-step", type=int, default=1)
+    parser.add_argument("--updates-per-step", type=int, default=20)
     parser.add_argument("--batch-size", type=int, default=256)                          # mini-batch size
     parser.add_argument("--eval-n-episodes", type=int, default=10)
     parser.add_argument("--test-n-episodes", type=int, default=int(1e3))
