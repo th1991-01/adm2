@@ -220,7 +220,7 @@ class ModelSimTrainer(BASETrainer):
                 
                 # update policy
                 if num_steps >= self.warmup_steps:
-                    for _ in range(self.updates_per_step*self.rollout_batch_size):
+                    for _ in range(self.updates_per_step):
                         batch = self.model_memory.sample(batch_size=self.batch_size)
                         batch.pop("timeout")
                         learning_info = self.agent.learn(**batch)
@@ -297,6 +297,7 @@ class ModelSimTrainer(BASETrainer):
             )
             for _ in pbar:
                 # step
+                print(obs.mean())
                 action, log_prob, value = self.agent.act_and_value(obs)
                 next_obs, reward, uncertainty, terminated, truncated = self.model_env.step(action)
                 reward -= self.penalty_coef * uncertainty
