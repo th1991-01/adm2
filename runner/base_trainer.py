@@ -54,7 +54,7 @@ class BASETrainer:
         self.load_time = args.load_time
         self.load_seed = args.load_seed
         if self.load_model:
-            self.load_dir = f"./result/{args.env}/{args.env_name}/{args.dyna_model}-{args.algo}/{self.load_time}/model"
+            self.load_dir = f"./result/{args.env}/{args.env_name}/{args.load_label}/{self.load_time}/model"
         else:
             self.load_dir = None
 

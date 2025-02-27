@@ -39,6 +39,7 @@ class ModelSim(gym.Env):
         self._cnt[env_ids] = 0
         return self._obs_seq[:, -1]
         
+    @ torch.no_grad()
     def step(self, action):
         self._act_seq = torch.cat((self._act_seq, action[:, None]), dim=1)
         

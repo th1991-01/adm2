@@ -24,6 +24,7 @@ def get_args():
     parser.add_argument("--rollout-batch-size", type=int, default=4096)
     parser.add_argument("--rollout-length", type=int, default=1000)
     parser.add_argument("--load-model", type=bool, default=False)
+    parser.add_argument("--load-label", type=str, default="adm-sac")
     parser.add_argument("--load-time", type=str, default="25-0224-100104")
     parser.add_argument("--load-seed", type=int, default=0)
     # only for any-step dyna model
