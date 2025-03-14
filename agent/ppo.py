@@ -25,7 +25,7 @@ class PPOAgent:
         device="cuda:0"
     ):
         # actor
-        self.actor = ACTOR["prob"](obs_shape, hidden_dims, action_dim).to(device)
+        self.actor = ACTOR["prob"](obs_shape, hidden_dims, action_dim, dist_unbounded=False).to(device)
 
         # critic
         self.critic = CRITIC["v"](obs_shape, hidden_dims).to(device)

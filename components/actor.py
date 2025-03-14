@@ -52,13 +52,13 @@ class DiagGaussian(nn.Module):
 
 class ProbActor(nn.Module):
     """ stochastic actor for PPO/A2C/SAC """
-    def __init__(self, obs_shape, hidden_dims, action_dim):
+    def __init__(self, obs_shape, hidden_dims, action_dim, dist_unbounded=True):
         super(ProbActor, self).__init__()
         self.backbone = MLP(input_dim=np.prod(obs_shape), hidden_dims=hidden_dims)
         self.dist_net = DiagGaussian(
             latent_dim=getattr(self.backbone, "output_dim"),
             output_dim=action_dim,
-            unbounded=True,
+            unbounded=dist_unbounded,
             conditioned_sigma=True
         )
 

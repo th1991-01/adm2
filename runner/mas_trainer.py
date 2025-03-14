@@ -297,7 +297,6 @@ class ModelSimTrainer(BASETrainer):
             )
             for _ in pbar:
                 # step
-                print(obs.mean())
                 action, log_prob, value = self.agent.act_and_value(obs)
                 next_obs, reward, uncertainty, terminated, truncated = self.model_env.step(action)
                 reward -= self.penalty_coef * uncertainty
