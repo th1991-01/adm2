@@ -55,40 +55,21 @@ class ReplayBuffer:
         self.cnt = (self.cnt+batch_size)%self.capacity
         self.size = min(self.size+batch_size, self.capacity)
 
-    def load_dataset(self, dataset, max_episode_step, rew_bias=0.0):
+    def load_dataset(self, dataset, rew_bias=0.0):
         """ load dataset """
-        have_next_obs = "next_observations" in dataset.keys()
-        use_timeout = "timeouts" in dataset.keys()
-
         N = dataset["rewards"].shape[0]
         if self.capacity < N:
             self.capacity = N
             self.reset()
-
-        episode_step = 0
-        for i in tqdm(range(N-1), desc="Loading dataset (in tensor)"):
-            obs = torch.as_tensor(dataset["observations"][i], dtype=torch.float32, device=self.device)
-            if have_next_obs:
-                next_obs = torch.as_tensor(dataset["next_observations"][i], dtype=torch.float32, device=self.device)
-            else:
-                next_obs = torch.as_tensor(dataset["observations"][i+1], dtype=torch.float32, device=self.device)
-            action = torch.as_tensor(dataset["actions"][i], dtype=torch.float32, device=self.device)
-            reward = torch.as_tensor(dataset["rewards"][i], dtype=torch.float32, device=self.device)
-            done = bool(dataset["terminals"][i])
-
-            if use_timeout:
-                timeout = bool(dataset["timeouts"][i])
-            else:
-                timeout = (episode_step == max_episode_step - 1)
-            if done or timeout:
-                episode_step = -1
-                if not have_next_obs:
-                    episode_step = 0
-                    self.cur_epi_start = self.cnt
-                    continue
-
-            self.store(obs, action, reward + rew_bias, next_obs, done, timeout)
-            episode_step += 1
+            
+        self.memory["s"][:N] = torch.as_tensor(dataset["observations"], dtype=torch.float32, device=self.device)
+        self.memory["a"][:N] = torch.as_tensor(dataset["actions"], dtype=torch.float32, device=self.device)
+        self.memory["r"][:N] = torch.as_tensor(dataset["rewards"], dtype=torch.float32, device=self.device).reshape(-1, 1) + rew_bias
+        self.memory["s_"][:N] = torch.as_tensor(dataset["next_observations"], dtype=torch.float32, device=self.device)
+        self.memory["done"][:N] = torch.as_tensor(dataset["terminals"], dtype=torch.float32, device=self.device).reshape(-1, 1)
+        self.memory["timeout"][:N] = torch.as_tensor(dataset["timeouts"], dtype=torch.float32, device=self.device).reshape(-1, 1)
+        self.cnt = N
+        self.size = N
 
     def load_neorl_dataset(self, dataset, rew_bias=0.0):
         """ load neorl dataset """

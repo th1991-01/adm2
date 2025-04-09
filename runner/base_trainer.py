@@ -1,5 +1,6 @@
 import os
 import gym
+import copy
 import json
 import d4rl
 import neorl
@@ -11,6 +12,8 @@ class BASETrainer:
     """ base trainer """
 
     def __init__(self, args):
+        self.args_dict = copy.deepcopy(vars(args))
+        
         if args.env == "neorl":
             self.make_env = lambda env_name: neorl.make(env_name)
         else:
@@ -59,6 +62,8 @@ class BASETrainer:
             self.load_dir = None
 
         self.logger = SummaryWriter(self.log_dir)
+        with open(os.path.join(self.record_dir, "hyper_param.json"), "w") as f:
+            json.dump(self.args_dict, f)
 
     def _eval_policy(self):
         """ evaluate policy """

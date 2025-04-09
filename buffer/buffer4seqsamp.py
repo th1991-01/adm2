@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 from .buffer import ReplayBuffer
 
 class ReplayBufferForSeqSampling(ReplayBuffer):
@@ -23,6 +24,15 @@ class ReplayBufferForSeqSampling(ReplayBuffer):
             self.dist_from_end[self.cur_epi_start:] += 1
             self.dist_from_end[:self.cnt] += 1
         if done == 1 or timeout == 1: self.cur_epi_start = self.cnt
+        
+    def load_dataset(self, dataset, reward_bias=0.0):
+        """ load dataset """
+        super().load_dataset(dataset, reward_bias)
+        self.dist_from_end = np.zeros(self.capacity, dtype=np.float32)
+        self.cur_epi_start = 0
+        for i in tqdm(range(self.cnt), desc="Preparing dataset"):
+            self.dist_from_end[self.cur_epi_start:i+1] += 1
+            if self.memory["done"][i].item() == 1: self.cur_epi_start = i + 1
 
     def sample_nstep(self, batch_size, nstep, start_idx=None, end_idx=None):
         """ sample a batch of {nstep} data """

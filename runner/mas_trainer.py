@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 
 from dynamics.adm_dynamics import ADMDynamics
+from dynamics.sadm_dynamics import SADMDynamics
 from components.static_fns import STATICFUNC
 from env.model_as_sim import ModelSim
 from agent.sac import SACAgent
@@ -34,6 +35,13 @@ class ModelSimTrainer(BASETrainer):
         self.max_adm_step = args.max_adm_step
         if args.dyna_model == "adm":
             self.dyna_model = ADMDynamics(
+                obs_dim=np.prod(args.obs_shape),
+                action_dim=args.action_dim,
+                hidden_dim=args.model_hidden_dim,
+                device=args.device
+            )
+        elif args.dyna_model == "sadm":
+            self.dyna_model = SADMDynamics(
                 obs_dim=np.prod(args.obs_shape),
                 action_dim=args.action_dim,
                 hidden_dim=args.model_hidden_dim,
@@ -121,7 +129,7 @@ class ModelSimTrainer(BASETrainer):
             dataset, _ = self.env.get_dataset(data_type=args.data_type, train_num=1000, need_val=False)
             self.dataset.load_neorl_dataset(dataset, rew_bias)
         else:
-            self.dataset.load_dataset(self.env.get_dataset(), self.env._max_episode_steps, rew_bias)
+            self.dataset.load_dataset(self.env.get_dataset(), rew_bias)
 
         # creat memory to store model-sim data
         if self.off_policy:
