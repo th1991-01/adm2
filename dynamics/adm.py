@@ -39,7 +39,7 @@ class ResBlock(nn.Module):
         return y
 
 class ADModel(nn.Module):
-    """ Any-step Dynamics Model (ARM) """
+    """ Any-step Dynamics Model (ADM) """
 
     def __init__(
         self,

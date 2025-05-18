@@ -97,6 +97,12 @@ class ReplayBuffer:
         act_std = torch.std(self.memory["a"][:self.size], dim=0)
         act_std[act_std < 1e-12] = 1.0
         return obs_mu, obs_std, act_mu, act_std
+    
+    def cal_max_min(self):
+        """ calculate max and min of obs and action """
+        obs_max = torch.max(self.memory["s"][:self.size], dim=0)[0]
+        obs_min = torch.min(self.memory["s"][:self.size], dim=0)[0]
+        return obs_max, obs_min
 
     def sample(self, batch_size):
         """ sample a batch of data """

@@ -1,4 +1,5 @@
 import os
+import copy
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -6,7 +7,7 @@ from tqdm import tqdm
 from dynamics.adm_dynamics import ADMDynamics
 from dynamics.sadm_dynamics import SADMDynamics
 from components.static_fns import STATICFUNC
-from env.model_as_sim import ModelSim
+from env.model_as_sim import ADMSim, SADMSim
 from agent.sac import SACAgent
 from agent.td3 import TD3Agent
 from agent.ppo import PPOAgent
@@ -32,21 +33,24 @@ class ModelSimTrainer(BASETrainer):
         if args.env == "neorl": task = "neorl-" + task
         if args.env == "maze": task = task + "-" + args.env_name.split('-')[1]
         self.static_fn = STATICFUNC[task.lower()]
-        self.max_adm_step = args.max_adm_step
         if args.dyna_model == "adm":
             self.dyna_model = ADMDynamics(
                 obs_dim=np.prod(args.obs_shape),
                 action_dim=args.action_dim,
                 hidden_dim=args.model_hidden_dim,
+                max_adm_step=args.max_adm_step,
                 device=args.device
             )
+            self.ModelSim = ADMSim
         elif args.dyna_model == "sadm":
             self.dyna_model = SADMDynamics(
                 obs_dim=np.prod(args.obs_shape),
                 action_dim=args.action_dim,
                 hidden_dim=args.model_hidden_dim,
+                max_adm_step=args.max_adm_step,
                 device=args.device
             )
+            self.ModelSim = SADMSim
         
         self.on_policy = False
         self.off_policy = False
@@ -153,8 +157,10 @@ class ModelSimTrainer(BASETrainer):
         # other parameters
         self.model_lr = args.model_lr
         self.max_adm_step = args.max_adm_step
+        self.n_starts = min(args.max_adm_step, args.n_starts)
         self.rollout_batch_size = args.rollout_batch_size
         self.rollout_length = args.rollout_length
+        self.dev_thresh = args.dev_thresh
         self.warmup_steps = args.warmup_steps
         self.n_epochs = args.n_epochs
         self.step_per_epoch = args.step_per_epoch
@@ -176,16 +182,37 @@ class ModelSimTrainer(BASETrainer):
             )
             self._save({})
         
+        obs_max, obs_min = self.dataset.cal_max_min()
+        self.dyna_model.set_max_min(obs_max, obs_min)
+        
         # build model-based env
-        init_seqs = self.dataset.sample_all_nstep(self.max_adm_step-1)
+        extra_params = {}
+        if self.ModelSim is SADMSim:
+            extra_params["ood_terminate"] = True
+            extra_params["dev_thresh"] = self.dev_thresh
+        init_seqs = self.dataset.sample_all_nstep(self.n_starts-1)
         init_seqs["s"] = torch.cat((init_seqs["s"], init_seqs["s_"][:, -1:]), dim=1)
-        self.model_env = ModelSim(
+        self.model_env = self.ModelSim(
             dynamics=self.dyna_model,
             static_fn=self.static_fn,
             max_steps=self.rollout_length,
             init_obs_seqs=init_seqs["s"],
             init_act_seqs=init_seqs["a"],
-            n_parallels=self.rollout_batch_size
+            n_parallels=self.rollout_batch_size,
+            **extra_params
+        )
+        
+        eval_init_seqs = self.dataset.sample_all_head_nstep(self.n_starts-1)
+        eval_init_seqs["s"] = torch.cat((eval_init_seqs["s"], eval_init_seqs["s_"][:, -1:]), dim=1)
+        extra_params["ood_terminate"] = False
+        self.eval_model_env = self.ModelSim(
+            dynamics=copy.deepcopy(self.dyna_model),
+            static_fn=self.static_fn,
+            max_steps=self.rollout_length,
+            init_obs_seqs=eval_init_seqs["s"],
+            init_act_seqs=eval_init_seqs["a"],
+            n_parallels=self.eval_n_episodes,
+            **extra_params
         )
         
         if self.off_policy:
@@ -200,9 +227,13 @@ class ModelSimTrainer(BASETrainer):
         records = {
             "epoch": [], "loss": {"actor": [], "critic1": [], "critic2": []}, "alpha": [], 
             "reward_mean": [], "reward_std": [], "reward_min": [], "reward_max": [],
+            "reward_mean_in_model": [], "reward_std_in_model": [], "reward_min_in_model": [], "reward_max_in_model": [],
+            "length_mean": [], "length_std": [], "length_min": [], "length_max": [],
+            "length_mean_in_model": [], "length_std_in_model": [], "length_min_in_model": [], "length_max_in_model": [],
             "score_mean": [], "score_std": [], "score_min": [], "score_max": []
         }
-        actor_loss, critic1_loss, critic2_loss, alpha, eval_reward, eval_score = [None]*6
+        actor_loss, critic1_loss, critic2_loss, alpha = [None]*4
+        eval_length_in_model, eval_length, eval_reward_in_model, eval_reward, eval_score = [None]*5
         obs = self.model_env.reset_all()
         num_steps = 0
 
@@ -216,6 +247,7 @@ class ModelSimTrainer(BASETrainer):
             for _ in pbar:
                 # step
                 action = self.agent.act(obs)
+                # next_obs, reward, terminated, truncated = self.model_env.step(action)
                 next_obs, reward, uncertainty, terminated, truncated = self.model_env.step(action)
                 reward -= self.penalty_coef * uncertainty
                 terminal = terminated | truncated
@@ -242,7 +274,10 @@ class ModelSimTrainer(BASETrainer):
                     actor_loss=actor_loss, 
                     critic1_loss=critic1_loss, 
                     critic2_loss=critic2_loss, 
+                    eval_reward_in_model=eval_reward_in_model,
                     eval_reward=eval_reward,
+                    eval_length_in_model=eval_length_in_model,
+                    eval_length=eval_length,
                     eval_score=eval_score
                 )
 
@@ -251,7 +286,8 @@ class ModelSimTrainer(BASETrainer):
                 self.lr_scheduler.step()
 
             # evaluate policy
-            episode_rewards = self._eval_policy()
+            episode_rewards, episode_lengths = self._eval_policy()
+            episode_rewards_in_model, episode_lengths_in_model = self._eval_policy_in_model()
             records["epoch"].append(e)
             records["loss"]["actor"].append(actor_loss)
             records["loss"]["critic1"].append(critic1_loss)
@@ -261,7 +297,22 @@ class ModelSimTrainer(BASETrainer):
             records["reward_std"].append(float(np.std(episode_rewards)))
             records["reward_min"].append(float(np.min(episode_rewards)))
             records["reward_max"].append(float(np.max(episode_rewards)))
+            records["length_mean"].append(float(np.mean(episode_lengths)))
+            records["length_std"].append(float(np.std(episode_lengths)))
+            records["length_min"].append(float(np.min(episode_lengths)))
+            records["length_max"].append(float(np.max(episode_lengths)))
+            records["reward_mean_in_model"].append(float(np.mean(episode_rewards_in_model)))
+            records["reward_std_in_model"].append(float(np.std(episode_rewards_in_model)))
+            records["reward_min_in_model"].append(float(np.min(episode_rewards_in_model)))
+            records["reward_max_in_model"].append(float(np.max(episode_rewards_in_model)))
+            records["length_mean_in_model"].append(float(np.mean(episode_lengths_in_model)))
+            records["length_std_in_model"].append(float(np.std(episode_lengths_in_model)))
+            records["length_min_in_model"].append(float(np.min(episode_lengths_in_model)))
+            records["length_max_in_model"].append(float(np.max(episode_lengths_in_model)))
             eval_reward = records["reward_mean"][-1]
+            eval_reward_in_model = records["reward_mean_in_model"][-1]
+            eval_length = records["length_mean"][-1]
+            eval_length_in_model = records["length_mean_in_model"][-1]
             
             if actor_loss is not None:
                 self.logger.add_scalar("loss/actor", actor_loss, e)
@@ -269,6 +320,9 @@ class ModelSimTrainer(BASETrainer):
                 self.logger.add_scalar("loss/critic2", critic2_loss, e)
                 self.logger.add_scalar("alpha", alpha, e)
             self.logger.add_scalar("eval/reward", eval_reward, e)
+            self.logger.add_scalar("eval/reward_in_model", eval_reward_in_model, e)
+            self.logger.add_scalar("eval/length", eval_length, e)
+            self.logger.add_scalar("eval/length_in_model", eval_length_in_model, e)
 
             if hasattr(self.eval_env, "get_normalized_score"):
                 records["score_mean"].append(self.eval_env.get_normalized_score(records["reward_mean"][-1])*100)
@@ -290,9 +344,13 @@ class ModelSimTrainer(BASETrainer):
         records = {
             "epoch": [], "loss": {"actor": [], "critic": []}, "kl": [], "value": [],
             "reward_mean": [], "reward_std": [], "reward_min": [], "reward_max": [],
+            "reward_mean_in_model": [], "reward_std_in_model": [], "reward_min_in_model": [], "reward_max_in_model": [],
+            "length_mean": [], "length_std": [], "length_min": [], "length_max": [],
+            "length_mean_in_model": [], "length_std_in_model": [], "length_min_in_model": [], "length_max_in_model": [],
             "score_mean": [], "score_std": [], "score_min": [], "score_max": []
         }
-        actor_loss, critic_loss, kl, value, eval_reward, eval_score = [None]*6
+        actor_loss, critic_loss, kl, value = [None]*4
+        eval_length_in_model, eval_length, eval_reward_in_model, eval_reward, eval_score = [None]*5
         obs = self.model_env.reset_all()
         num_steps = 0
 
@@ -306,6 +364,7 @@ class ModelSimTrainer(BASETrainer):
             for _ in pbar:
                 # step
                 action, log_prob, value = self.agent.act_and_value(obs)
+                # next_obs, reward, terminated, truncated = self.model_env.step(action)
                 next_obs, reward, uncertainty, terminated, truncated = self.model_env.step(action)
                 reward -= self.penalty_coef * uncertainty
                 terminal = terminated | truncated
@@ -337,7 +396,10 @@ class ModelSimTrainer(BASETrainer):
                     kl=kl,
                     actor_loss=actor_loss, 
                     critic_loss=critic_loss,
+                    eval_reward_in_model=eval_reward_in_model,
                     eval_reward=eval_reward,
+                    eval_length_in_model=eval_length_in_model,
+                    eval_length=eval_length,
                     eval_score=eval_score
                 )
 
@@ -346,7 +408,8 @@ class ModelSimTrainer(BASETrainer):
                 self.lr_scheduler.step()
 
             # evaluate policy
-            episode_rewards = self._eval_policy()
+            episode_rewards, episode_lengths = self._eval_policy()
+            episode_rewards_in_model, episode_lengths_in_model = self._eval_policy_in_model()
             records["epoch"].append(e)
             records["loss"]["actor"].append(actor_loss)
             records["loss"]["critic"].append(critic_loss)
@@ -356,7 +419,22 @@ class ModelSimTrainer(BASETrainer):
             records["reward_std"].append(float(np.std(episode_rewards)))
             records["reward_min"].append(float(np.min(episode_rewards)))
             records["reward_max"].append(float(np.max(episode_rewards)))
+            records["length_mean"].append(float(np.mean(episode_lengths)))
+            records["length_std"].append(float(np.std(episode_lengths)))
+            records["length_min"].append(float(np.min(episode_lengths)))
+            records["length_max"].append(float(np.max(episode_lengths)))
+            records["reward_mean_in_model"].append(float(np.mean(episode_rewards_in_model)))
+            records["reward_std_in_model"].append(float(np.std(episode_rewards_in_model)))
+            records["reward_min_in_model"].append(float(np.min(episode_rewards_in_model)))
+            records["reward_max_in_model"].append(float(np.max(episode_rewards_in_model)))
+            records["length_mean_in_model"].append(float(np.mean(episode_lengths_in_model)))
+            records["length_std_in_model"].append(float(np.std(episode_lengths_in_model)))
+            records["length_min_in_model"].append(float(np.min(episode_lengths_in_model)))
+            records["length_max_in_model"].append(float(np.max(episode_lengths_in_model)))
             eval_reward = records["reward_mean"][-1]
+            eval_length = records["length_mean"][-1]
+            eval_reward_in_model = records["reward_mean_in_model"][-1]
+            eval_length_in_model = records["length_mean_in_model"][-1]
             
             if actor_loss is not None:
                 self.logger.add_scalar("loss/actor", actor_loss, e)
@@ -364,6 +442,9 @@ class ModelSimTrainer(BASETrainer):
                 self.logger.add_scalar("kl", kl, e)
                 self.logger.add_scalar("value", value, e)
             self.logger.add_scalar("eval/reward", eval_reward, e)
+            self.logger.add_scalar("eval/length", eval_length, e)
+            self.logger.add_scalar("eval/reward_in_model", eval_reward_in_model, e)
+            self.logger.add_scalar("eval/length_in_model", eval_length_in_model, e)
 
             if hasattr(self.eval_env, "get_normalized_score"):
                 records["score_mean"].append(self.eval_env.get_normalized_score(records["reward_mean"][-1])*100)
@@ -377,3 +458,16 @@ class ModelSimTrainer(BASETrainer):
             self._save(records)
 
         self.logger.close()
+        
+    def _eval_policy_in_model(self):
+        episode_rewards = torch.zeros(self.eval_n_episodes, dtype=torch.float32, device=self.device)
+        episode_lengths = torch.zeros(self.eval_n_episodes, dtype=torch.float32, device=self.device)
+        done = torch.zeros(self.eval_n_episodes, dtype=torch.bool, device=self.device)
+        obs = self.eval_model_env.reset_all()
+        while not done.all():
+            action = self.agent.act(obs, deterministic=True)
+            obs, reward, _, terminated, truncated = self.eval_model_env.step(action)
+            episode_rewards[~done] += reward.flatten()[~done]
+            episode_lengths[~done] += 1
+            done[~done] = (terminated | truncated).flatten()[~done]
+        return episode_rewards.cpu().numpy().tolist(), episode_lengths.cpu().numpy().tolist()

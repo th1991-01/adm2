@@ -18,29 +18,32 @@ def get_args():
     parser.add_argument("--env-name", type=str, default="hopper-medium-v2")
     
     # dynamics model parameters
-    parser.add_argument("--dyna-model", type=str, default="adm", choices=["adm"])
+    parser.add_argument("--dyna-model", type=str, default="sadm", choices=["adm", "sadm"])
     parser.add_argument("--model-hidden-dim", type=int, default=200)
     parser.add_argument("--model-lr", type=float, default=3e-4)
-    parser.add_argument("--rollout-batch-size", type=int, default=4096)
+    parser.add_argument("--rollout-batch-size", type=int, default=256)
     parser.add_argument("--rollout-length", type=int, default=1000)
-    parser.add_argument("--load-model", type=bool, default=False)
-    parser.add_argument("--load-label", type=str, default="adm-sac")
-    parser.add_argument("--load-time", type=str, default="25-0224-100104")
+    parser.add_argument("--given-reward", type=bool, default=True)
+    parser.add_argument("--load-model", type=bool, default=True)
+    parser.add_argument("--load-label", type=str, default="sadm-sac")
+    parser.add_argument("--load-time", type=str, default="25-0509-173128")
     parser.add_argument("--load-seed", type=int, default=0)
     # only for any-step dyna model
-    parser.add_argument("--max-adm-step", type=int, default=10)                         # maximum length of rnn input
+    parser.add_argument("--max-adm-step", type=int, default=5)                          # maximum length of rnn input
+    parser.add_argument("--n-starts", type=int, default=5)
+    parser.add_argument("--dev-thresh", type=float, default=0.05)
 
     # policy parameters
     parser.add_argument("--algo", type=str, default="sac", choices=["sac", "td3", "ppo"])
     parser.add_argument("--ac-hidden-dims", type=list, default=[256, 256])              # dimensions of actor/critic hidden layers
     parser.add_argument("--actor-lr", type=float, default=1e-4)                         # learning rate of actor
-    parser.add_argument("--lr-schedule", type=bool, default=True)
+    parser.add_argument("--lr-schedule", type=bool, default=False)
     parser.add_argument("--critic-lr", type=float, default=3e-4)                        # learning rate of critic
     parser.add_argument("--gamma", type=float, default=0.99)                            # discount factor
     parser.add_argument("--tau", type=float, default=0.005)                             # update rate of target network
-    parser.add_argument("--penalty-coef", type=float, default=1.0)                      # penalty coefficient
+    parser.add_argument("--penalty-coef", type=float, default=0)                        # penalty coefficient
     # for SAC
-    parser.add_argument("--alpha", type=float, default=0.1)                             # weight of entropy
+    parser.add_argument("--alpha", type=float, default=0.05)                            # weight of entropy
     parser.add_argument("--auto-alpha", type=bool, default=True)                        # auto alpha adjustment
     parser.add_argument("--alpha-lr", type=float, default=1e-4)                         # learning rate of alpha
     parser.add_argument("--target-entropy", type=int, default=None)                     # target entropy
@@ -61,14 +64,14 @@ def get_args():
     parser.add_argument("--ppo-epoch", type=int, default=5)
 
     # replay-buffer parameters (for off-policy algos: sac, td3)
-    parser.add_argument("--buffer-size", type=int, default=int(1e6))
+    parser.add_argument("--buffer-size", type=int, default=int(1e7))
 
     # running parameters
-    parser.add_argument("--warmup-steps", type=int, default=10)
-    parser.add_argument("--n-epochs", type=int, default=3000)
-    parser.add_argument("--step-per-epoch", type=int, default=24)
+    parser.add_argument("--warmup-steps", type=int, default=50)
+    parser.add_argument("--n-epochs", type=int, default=1500, choices=[1500])
+    parser.add_argument("--step-per-epoch", type=int, default=25)
     parser.add_argument("--updates-per-step", type=int, default=20)
-    parser.add_argument("--batch-size", type=int, default=256)                          # mini-batch size
+    parser.add_argument("--batch-size", type=int, default=1024)                          # mini-batch size
     parser.add_argument("--eval-n-episodes", type=int, default=10)
     parser.add_argument("--test-n-episodes", type=int, default=int(1e3))
     parser.add_argument("--device", type=str, default="cuda:0")

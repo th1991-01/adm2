@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from .adm import ADModel
+from .sadm import SADModel
 
 def soft_clamp(x : torch.Tensor, _min=None, _max=None):
     # clamp tensor values while maintaining the gradient
@@ -16,8 +16,8 @@ def soft_clamp(x : torch.Tensor, _min=None, _max=None):
         x = _min + F.softplus(x - _min)
     return x
 
-class ADMDynamics(nn.Module):
-    """ Any-step Dynamics """
+class SADMDynamics(nn.Module):
+    """ Self-transition Any-step Dynamics """
 
     def __init__(
         self,
@@ -26,20 +26,18 @@ class ADMDynamics(nn.Module):
         hidden_dim=200,
         rnn_num_layers=3,
         max_adm_step=None,
-        dropout=0.1,
+        dropout=0,
         device="cuda:0"
     ):
         super().__init__()
         self.obs_dim = obs_dim
         self.action_dim = action_dim
-        self.output_dim = (self.obs_dim + 1) * 2
         self.max_adm_step = max_adm_step
         self.device = device
 
-        self.model = ADModel(
+        self.model = SADModel(
             obs_dim=obs_dim,
             action_dim=action_dim,
-            output_dim=self.output_dim,
             hidden_dim=hidden_dim,
             rnn_num_layers=rnn_num_layers,
             dropout=dropout,
@@ -60,7 +58,10 @@ class ADMDynamics(nn.Module):
             "min_logvar",
             nn.Parameter(torch.ones(self.obs_dim + 1) * -10, requires_grad=True)
         )
-
+        
+        self.obs_max = None
+        self.obs_min = None
+        
         self.to(self.device)
 
     def set_mu_std(self, obs_mu, obs_std, act_mu, act_std):
@@ -68,6 +69,10 @@ class ADMDynamics(nn.Module):
         self.obs_std.data = torch.as_tensor(obs_std, dtype=torch.float32, device=self.device)
         self.act_mu.data = torch.as_tensor(act_mu, dtype=torch.float32, device=self.device)
         self.act_std.data = torch.as_tensor(act_std, dtype=torch.float32, device=self.device)
+        
+    def set_max_min(self, obs_max, obs_min):
+        self.obs_max = torch.as_tensor(obs_max, dtype=torch.float32, device=self.device)
+        self.obs_min = torch.as_tensor(obs_min, dtype=torch.float32, device=self.device)
 
     def forward(self, obs, action):
         # shape@obs: (bs, obs_dim)
@@ -81,33 +86,57 @@ class ADMDynamics(nn.Module):
         logvar = soft_clamp(logvar, self.min_logvar, self.max_logvar)
         return mean, logvar
     
+    def encode_obs(self, obs):
+        obs = (obs - self.obs_mu) / self.obs_std
+        return self.model.encode_obs(obs)
+    
+    def decode_h(self, h_state):
+        return self.model.decode_h(h_state)
+    
+    def init_hiddens(self, obs_seq, act_seq):
+        # obs_seq: (bs, m, -1)
+        # act_seq: (bs, m-1, -1)
+        _obs_seq = (obs_seq - self.obs_mu) / self.obs_std
+        _act_seq = (act_seq - self.act_mu) / self.act_std
+        return self.model.init_hiddens(_obs_seq, _act_seq)
+    
+    def set_hiddens(self, hiddens, env_ids=None):
+        self.model.set_hiddens(hiddens, env_ids)
+        
+    def update_hiddens(self, hiddens, env_ids):
+        self.model.update_hiddens(hiddens, env_ids)
+        
+    def transition_forward(self, action):
+        # action: (bs, -1)
+        _action = (action - self.act_mu) / self.act_std
+        model_out = self.model.transition(_action)
+        mean, logvar = torch.chunk(model_out, 2, dim=-1)
+        logvar = soft_clamp(logvar, self.min_logvar, self.max_logvar)
+        return mean, logvar
+    
+    # @ torch.no_grad()
+    # def dyna_dist(self, obs, action):
+    #     mean, logvar = self.forward(obs, action)
+    #     mean[:, :-1] += obs
+    #     std = torch.sqrt(torch.exp(logvar))
+    #     next_obs_mean = mean[:, :-1]
+    #     next_obs_std = std[:, :-1]
+    #     reward_mean = mean[:, -1:]
+    #     reward_std = std[:, -1:]
+    #     return next_obs_mean, next_obs_std, reward_mean, reward_std
+    
     @ torch.no_grad()
     def dyna_dist(self, obs, action):
-        mean, logvar = self.forward(obs, action)
-        mean[:, :-1] += obs
+        # obs: (bs, -1)
+        # action: (bs, -1)
+        mean, logvar = self.transition_forward(action)
+        mean[..., :-1] += obs[None]
         std = torch.sqrt(torch.exp(logvar))
-        next_obs_mean = mean[:, :-1]
-        next_obs_std = std[:, :-1]
-        reward_mean = mean[:, -1:]
-        reward_std = std[:, -1:]
+        next_obs_mean = mean[..., :-1]
+        next_obs_std = std[..., :-1]
+        reward_mean = mean[..., -1:]
+        reward_std = std[..., -1:]
         return next_obs_mean, next_obs_std, reward_mean, reward_std
-
-    @ torch.no_grad()
-    def step(self, obs, action):
-        mean, logvar = self.forward(obs, action)
-        mean[:, :-1] += obs
-        std = torch.sqrt(torch.exp(logvar))
-        sample = torch.normal(mean, std)
-        next_obs = sample[:, :-1]
-        reward = sample[:, -1:]
-        return next_obs, reward
-
-    @ torch.no_grad()
-    def dstep(self, obs, action):
-        """ deterministic step """
-        mean, _ = self.forward(obs, action)
-        mean[:, :-1] += obs
-        return mean[:, :-1], mean[:, -1:]
     
     def learn_from(self, max_adm_step, buffer, lr, batch_size, max_holdout=1000, min_epochs=1):
         """ learn any-step dynamics model """
@@ -125,6 +154,7 @@ class ADMDynamics(nn.Module):
 
         epoch = 0
         holdout_losses = [1e10] * max_adm_step
+        eval_recon_loss = 1e10
         cnt = 0
 
         while True:
@@ -139,7 +169,7 @@ class ADMDynamics(nn.Module):
                 a_seq = any_step_seq["a"]
                 r = any_step_seq["r"][:, -1]
                 s_ = any_step_seq["s_"][:, -1]
-                trgt = torch.concatenate((s_-s, r), dim=-1)
+                trgt = torch.concatenate((s_-any_step_seq["s"][:, -1], r), dim=-1)
 
                 # any-step loss
                 mean, logvar = self.forward(s, a_seq)
@@ -148,7 +178,13 @@ class ADMDynamics(nn.Module):
                 var_loss = logvar.mean()
                 loss = mse_loss + var_loss
                 # loss = loss + 0.01 * self.dynamics.max_logvar.sum() - 0.01 * self.dynamics.min_logvar.sum()
-
+                
+                # recon loss
+                h_ = self.encode_obs(s_)
+                s_recon = self.decode_h(h_)
+                recon_loss = torch.pow(s_recon-s_, 2).mean()
+                loss += 0.1 * recon_loss
+                
                 # backward
                 optim.zero_grad()
                 loss.backward()
@@ -156,14 +192,17 @@ class ADMDynamics(nn.Module):
 
                 pbar.set_postfix(
                     train_loss=loss.item(),
-                    holdout_loss=np.mean(holdout_losses)
+                    holdout_loss=np.mean(holdout_losses),
+                    recon_loss=eval_recon_loss
                 )
 
             new_val_losses, improve_ks = [], []
+            s_list = []
             for k in range(1, max_adm_step+1):
                 k_step_seq = buffer.sample_all_nstep(k, start_idx=train_size)
+                s_list.append(k_step_seq["s_"][:, -1])
                 k_val_loss = self.validate_from(
-                    s=k_step_seq["s"][:, 0],
+                    s=k_step_seq["s"],
                     a=k_step_seq["a"],
                     r=k_step_seq["r"][:, -1],
                     s_=k_step_seq["s_"][:, -1]
@@ -172,6 +211,12 @@ class ADMDynamics(nn.Module):
                 k_improvement = (holdout_losses[k-1] - k_val_loss) / holdout_losses[k-1]
                 if k_improvement > 0:
                     improve_ks.append(k)
+                    
+            with torch.no_grad():
+                s_ = torch.cat(s_list, dim=0)
+                h_ = self.encode_obs(s_)
+                s_recon = self.decode_h(h_)
+                eval_recon_loss = float(torch.pow(s_recon-s_, 2).mean().cpu().numpy())
 
             if len(improve_ks) > 0 and np.mean(new_val_losses) < np.mean(holdout_losses):
                 saved_state_dict = copy.deepcopy(self.state_dict())
@@ -186,10 +231,11 @@ class ADMDynamics(nn.Module):
         self.load_state_dict(saved_state_dict)
         return float(np.mean(holdout_losses))
     
+    @ torch.no_grad()
     def validate_from(self, s, a, r, s_):
         """ validate any-step dynamics model (fixed k-step validation) """
-        trgt = torch.cat((s_-s, r), dim=-1)
-        mean, _ = self.forward(s, a)
+        trgt = torch.cat((s_-s[:, -1], r), dim=-1)
+        mean, _ = self.forward(s[:, 0], a)
         loss = ((mean - trgt) ** 2).mean()
         return float(loss.cpu().detach().numpy())
     

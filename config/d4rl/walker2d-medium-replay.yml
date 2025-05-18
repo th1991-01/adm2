@@ -1,4 +1,2 @@
-max_adm_step: 5
-penalty_coef: 0.1
-
+max_adm_step: 10
 auto_alpha: False

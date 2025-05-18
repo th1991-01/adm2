@@ -68,15 +68,18 @@ class BASETrainer:
     def _eval_policy(self):
         """ evaluate policy """
         episode_rewards = []
+        episode_lengths = []
         for _ in range(self.eval_n_episodes):
             done = False
             episode_rewards.append(0)
+            episode_lengths.append(0)
             obs = self.eval_env.reset()
             while not done:
                 action = self.agent.act(obs, deterministic=True).cpu().numpy()
                 obs, reward, done, _ = self.eval_env.step(action)
                 episode_rewards[-1] += reward
-        return episode_rewards
+                episode_lengths[-1] += 1
+        return episode_rewards, episode_lengths
 
     def _save(self, records):
         """ save model and record """
