@@ -38,9 +38,10 @@ class ReplayBufferForSeqSampling(ReplayBuffer):
         
         for i in tqdm(range(self.cnt), desc="Preparing dataset"):
             self.dist_from_end[self.cur_epi_start:i+1] += 1
-            if self.memory["done"][i].item() == 1 or self.memory["timeout"][i].item() == 1: 
-                self.cur_epi_start = i + 1
-                self.epi_starts.append(self.cur_epi_start)
+            if self.memory["done"][i].item() == 1 or self.memory["timeout"][i].item() == 1:
+                if i + 1 < self.size:
+                    self.cur_epi_start = i + 1
+                    self.epi_starts.append(self.cur_epi_start)
 
     def sample_nstep(self, batch_size, nstep, start_idx=None, end_idx=None):
         """ sample a batch of {nstep} data """
