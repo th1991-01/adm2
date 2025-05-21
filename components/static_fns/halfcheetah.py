@@ -10,10 +10,13 @@ class StaticFns:
         done = ~not_done
         done = done[:, None]
         return done
-
+    
     @staticmethod
-    def recompute_reward_fn(obs, act, next_obs, rew):
+    def reward_fn(obs, act, next_obs):
         assert len(obs.shape) == len(next_obs.shape) == len(act.shape) == 2
-
-        new_rew = -(rew + 0.1 * np.sum(np.square(act))) - 0.1 * np.sum(np.square(act))
-        return new_rew
+        
+        x_vel = next_obs[:, 8]
+        cost = np.sum(np.square(act), axis=-1)
+        reward = 1.0 * x_vel - 0.1 * cost
+        reward = reward[:, None]
+        return reward

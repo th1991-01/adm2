@@ -24,6 +24,7 @@ class ADMSim(gym.Env):
         self.n_choices = self.init_obs_seqs.shape[0]
         self.n_parallels = n_parallels
 
+    @ torch.no_grad()
     def reset_all(self):
         sample_ids = np.random.randint(0, self.n_choices, self.n_parallels)
         self._obs_seq = self.init_obs_seqs[sample_ids]
@@ -31,6 +32,7 @@ class ADMSim(gym.Env):
         self._cnt = torch.zeros((self.n_parallels, 1), device=self._obs_seq.device)
         return self._obs_seq[:, -1]
         
+    @ torch.no_grad()
     def reset(self, env_ids):
         sample_ids = np.random.randint(0, self.n_choices, len(env_ids))
         self._obs_seq[env_ids] = self.init_obs_seqs[sample_ids]
@@ -101,6 +103,7 @@ class SADMSim(ADMSim):
         self.ood_terminate = ood_terminate
         self.dev_thresh = dev_thresh
         
+    @ torch.no_grad()
     def reset_all(self):
         sample_ids = np.random.randint(0, self.n_choices, self.n_parallels)
         self._obs_seq = self.init_obs_seqs[sample_ids]
@@ -110,6 +113,7 @@ class SADMSim(ADMSim):
         self._cnt = torch.zeros((self.n_parallels, 1), device=self._obs_seq.device)
         return self._obs_seq[:, -1]
         
+    @ torch.no_grad()
     def reset(self, env_ids):
         sample_ids = np.random.randint(0, self.n_choices, len(env_ids))
         self._obs_seq[env_ids] = self.init_obs_seqs[sample_ids]

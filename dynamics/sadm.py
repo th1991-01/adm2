@@ -82,7 +82,7 @@ class SADModel(nn.Module):
         )
         # h to delta obs
         self.out_layer = nn.Sequential(
-            nn.Linear(hidden_dim*rnn_num_layers, hidden_dim),
+            nn.Linear(hidden_dim*2, hidden_dim),
             ResBlock(hidden_dim, hidden_dim, dropout=dropout),
             ResBlock(hidden_dim, hidden_dim, dropout=dropout),
             ResBlock(hidden_dim, hidden_dim, dropout=dropout),
@@ -95,9 +95,12 @@ class SADModel(nn.Module):
         h_state = self.encoder(obs)
         h_state = h_state.view(-1, self.hidden_dim, self.rnn_num_layers).permute(2, 0, 1)
         h_state = h_state.contiguous()
+        seclast_h = h_state[-1]
         rnn_out, h_state = self.rnn_layer(act_seq, h_state)
-        # rnn_out = rnn_out[:, -1]
-        next_in = h_state.permute(1, 2, 0).reshape(-1, self.hidden_dim*self.rnn_num_layers)
+        if rnn_out.shape[1] > 1:
+            seclast_h = rnn_out[:, -2]
+        last_h = rnn_out[:, -1]
+        next_in = torch.cat((seclast_h, last_h), dim=-1)
         output = self.out_layer(next_in)
         return output, h_state
     
@@ -138,9 +141,12 @@ class SADModel(nn.Module):
         action = torch.cat([action]*self.n_hiddens, dim=0)
         h_state = self.hiddens.view(-1, self.hidden_dim, self.rnn_num_layers).permute(2, 0, 1)
         h_state = h_state.contiguous()
+        seclast_h = h_state[-1]
         rnn_out, h_state = self.rnn_layer(action[:, None], h_state)
+        if rnn_out.shape[1] > 1:
+            seclast_h = rnn_out[:, -2]
+        last_h = rnn_out[:, -1]
         self.hiddens = h_state.permute(1, 2, 0).reshape(self.n_hiddens, self.n_parallels, -1)
-        # rnn_out = rnn_out[:, -1]
-        next_in = h_state.permute(1, 2, 0).reshape(-1, self.hidden_dim*self.rnn_num_layers)
+        next_in = torch.cat((seclast_h, last_h), dim=-1)
         output = self.out_layer(next_in).view(self.n_hiddens, self.n_parallels, -1)
         return output

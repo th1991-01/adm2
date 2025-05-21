@@ -114,17 +114,6 @@ class SADMDynamics(nn.Module):
         logvar = soft_clamp(logvar, self.min_logvar, self.max_logvar)
         return mean, logvar
     
-    # @ torch.no_grad()
-    # def dyna_dist(self, obs, action):
-    #     mean, logvar = self.forward(obs, action)
-    #     mean[:, :-1] += obs
-    #     std = torch.sqrt(torch.exp(logvar))
-    #     next_obs_mean = mean[:, :-1]
-    #     next_obs_std = std[:, :-1]
-    #     reward_mean = mean[:, -1:]
-    #     reward_std = std[:, -1:]
-    #     return next_obs_mean, next_obs_std, reward_mean, reward_std
-    
     @ torch.no_grad()
     def dyna_dist(self, obs, action):
         # obs: (bs, -1)
@@ -170,6 +159,7 @@ class SADMDynamics(nn.Module):
                 r = any_step_seq["r"][:, -1]
                 s_ = any_step_seq["s_"][:, -1]
                 trgt = torch.concatenate((s_-any_step_seq["s"][:, -1], r), dim=-1)
+                # trgt = torch.concatenate((s_, r), dim=-1)
 
                 # any-step loss
                 mean, logvar = self.forward(s, a_seq)
@@ -235,6 +225,7 @@ class SADMDynamics(nn.Module):
     def validate_from(self, s, a, r, s_):
         """ validate any-step dynamics model (fixed k-step validation) """
         trgt = torch.cat((s_-s[:, -1], r), dim=-1)
+        # trgt = torch.cat((s_, r), dim=-1)
         mean, _ = self.forward(s[:, 0], a)
         loss = ((mean - trgt) ** 2).mean()
         return float(loss.cpu().detach().numpy())
