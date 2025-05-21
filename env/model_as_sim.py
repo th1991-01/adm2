@@ -154,7 +154,6 @@ class SADMSim(ADMSim):
         
         # fix terminated
         if self.ood_terminate:
-            ood_terminated = (next_obs > self.dynamics.obs_max[None]) | (next_obs < self.dynamics.obs_min[None])
             next_h = self.dynamics.encode_obs(next_obs)
             next_obs_recon = self.dynamics.decode_h(next_h)
             ood_terminated = torch.pow(next_obs_recon-next_obs, 2) > self.dev_thresh

@@ -18,7 +18,7 @@ from buffer.buffer4rollout import RolloutBuffer
 from .base_trainer import BASETrainer
 
 class ModelSimTrainer(BASETrainer):
-    """ offline MBRL trainer """
+    """ model-as-simulator trainer """
 
     def __init__(self, args):
         if args.env == "neorl":
@@ -124,7 +124,7 @@ class ModelSimTrainer(BASETrainer):
 
         # init replay buffer to store environmental data
         self.dataset = ReplayBufferForSeqSampling(
-            buffer_size=args.buffer_size,
+            buffer_size=1000000,
             obs_shape=args.obs_shape,
             action_dim=args.action_dim
         )
@@ -181,9 +181,6 @@ class ModelSimTrainer(BASETrainer):
                 batch_size=self.batch_size
             )
             self._save({})
-        
-        obs_max, obs_min = self.dataset.cal_max_min()
-        self.dyna_model.set_max_min(obs_max, obs_min)
         
         # build model-based env
         extra_params = {}
