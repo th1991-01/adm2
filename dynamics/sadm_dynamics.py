@@ -159,7 +159,6 @@ class SADMDynamics(nn.Module):
                 r = any_step_seq["r"][:, -1]
                 s_ = any_step_seq["s_"][:, -1]
                 trgt = torch.concatenate((s_-any_step_seq["s"][:, -1], r), dim=-1)
-                # trgt = torch.concatenate((s_, r), dim=-1)
 
                 # any-step loss
                 mean, logvar = self.forward(s, a_seq)
@@ -225,7 +224,6 @@ class SADMDynamics(nn.Module):
     def validate_from(self, s, a, r, s_):
         """ validate any-step dynamics model (fixed k-step validation) """
         trgt = torch.cat((s_-s[:, -1], r), dim=-1)
-        # trgt = torch.cat((s_, r), dim=-1)
         mean, _ = self.forward(s[:, 0], a)
         loss = ((mean - trgt) ** 2).mean()
         return float(loss.cpu().detach().numpy())
