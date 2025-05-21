@@ -164,7 +164,7 @@ class ModelSimEvaluator:
         # other parameters
         self.max_adm_step = args.max_adm_step
         self.n_starts = min(args.max_adm_step, args.n_starts)
-        self.rollout_batch_size = 1
+        self.rollout_batch_size = 10
         self.rollout_length = args.rollout_length
         self.device = args.device
         self.seed = args.seed
@@ -174,7 +174,7 @@ class ModelSimEvaluator:
         self.eval_mujoco_env = MujocoOracleDynamics(self.env)
         
         # build model-based env
-        extra_params = {"ood_terminate": False}
+        extra_params = {"ood_terminate": True}
         eval_init_seqs = self.dataset.sample_all_head_nstep(self.n_starts-1)
         eval_init_seqs["s"] = torch.cat((eval_init_seqs["s"], eval_init_seqs["s_"][:, -1:]), dim=1)
         self.eval_model_env = self.ModelSim(
@@ -190,11 +190,15 @@ class ModelSimEvaluator:
         
         # roll-out in mujoco env
         mujoco_imgs = []
-        obs = copy.deepcopy(init_obs).flatten().cpu().numpy()
-        for _ in tqdm(range(self.rollout_length), desc="Roll-out in MujocoEnv"):
+        obs = copy.deepcopy(init_obs[0]).flatten().cpu().numpy()
+        episode_reward = 0
+        pbar = tqdm(range(self.rollout_length), desc="Roll-out in MujocoEnv")
+        for _ in pbar:
             action = self.agent.act(obs, deterministic=True).cpu().numpy()
-            obs, _, _, _ = self.eval_mujoco_env.step(obs, action)
+            obs, reward, _, _ = self.eval_mujoco_env.step(obs, action)
+            episode_reward += reward
             mujoco_imgs.append(self.eval_mujoco_env.env.render(mode="rgb_array"))
+            pbar.set_postfix(accum_reward=episode_reward)
             
         for i in range(len(mujoco_imgs)):
             if i % 100 == 0:
@@ -208,11 +212,16 @@ class ModelSimEvaluator:
         # roll-out in model env
         model_imgs = []
         obs = copy.deepcopy(init_obs)
-        for _ in tqdm(range(self.rollout_length), desc="Roll-out in ModelEnv"):
+        episode_reward = 0
+        id = 0
+        pbar = tqdm(range(self.rollout_length), desc="Roll-out in ModelEnv")
+        for _ in pbar:
             action = self.agent.act(obs, deterministic=True)
-            obs, _, _, _, _ = self.eval_model_env.step(action)
-            self.eval_mujoco_env._set_state_from_obs(obs.flatten().cpu().numpy())
+            obs, reward, _, _, _ = self.eval_model_env.step(action)
+            episode_reward += reward[id].item()
+            self.eval_mujoco_env._set_state_from_obs(copy.deepcopy(obs[id]).flatten().cpu().numpy())
             model_imgs.append(self.eval_mujoco_env.env.render(mode="rgb_array"))
+            pbar.set_postfix(accum_reward=episode_reward)
             
         for i in range(len(model_imgs)):
             if i % 100 == 0:
@@ -228,5 +237,4 @@ class ModelSimEvaluator:
         for i in range(self.rollout_length):
             vs_img = np.concatenate((model_imgs[i], mujoco_imgs[i]), axis=1)
             writer.append_data(vs_img)
-        writer.close()
-            
+        writer.close() 
