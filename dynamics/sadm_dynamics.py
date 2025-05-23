@@ -169,9 +169,11 @@ class SADMDynamics(nn.Module):
                 # loss = loss + 0.01 * self.dynamics.max_logvar.sum() - 0.01 * self.dynamics.min_logvar.sum()
                 
                 # recon loss
-                h_ = self.encode_obs(s_)
-                s_recon = self.decode_h(h_)
-                recon_loss = torch.pow(s_recon-s_, 2).mean()
+                all_s = torch.cat((any_step_seq["s"], any_step_seq["s_"][:, -1:]), dim=1)
+                all_s = all_s.reshape(-1, self.obs_dim)
+                all_h = self.encode_obs(all_s)
+                all_s_recon = self.decode_h(all_h)
+                recon_loss = torch.pow(all_s_recon - all_s, 2).mean()
                 loss += 0.1 * recon_loss
                 
                 # backward
@@ -223,7 +225,7 @@ class SADMDynamics(nn.Module):
     @ torch.no_grad()
     def validate_from(self, s, a, r, s_):
         """ validate any-step dynamics model (fixed k-step validation) """
-        trgt = torch.cat((s_-s[:, -1], r), dim=-1)
+        trgt = torch.cat((s_ - s[:, -1], r), dim=-1)
         mean, _ = self.forward(s[:, 0], a)
         loss = ((mean - trgt) ** 2).mean()
         return float(loss.cpu().detach().numpy())
