@@ -169,11 +169,9 @@ class SADMDynamics(nn.Module):
                 # loss = loss + 0.01 * self.dynamics.max_logvar.sum() - 0.01 * self.dynamics.min_logvar.sum()
                 
                 # recon loss
-                all_s = torch.cat((any_step_seq["s"], any_step_seq["s_"][:, -1:]), dim=1)
-                all_s = all_s.reshape(-1, self.obs_dim)
-                all_h = self.encode_obs(all_s)
-                all_s_recon = self.decode_h(all_h)
-                recon_loss = torch.pow(all_s_recon - all_s, 2).mean()
+                h_ = self.encode_obs(s_)
+                s_recon = self.decode_h(h_)
+                recon_loss = torch.pow(s_recon - s_, 2).mean()
                 loss += 0.1 * recon_loss
                 
                 # backward
