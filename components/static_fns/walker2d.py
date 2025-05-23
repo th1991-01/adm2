@@ -19,6 +19,7 @@ class StaticFns:
         assert len(obs.shape) == len(next_obs.shape) == len(act.shape) == 2
 
         not_done = StaticFns.healthy_fn(next_obs)
+        not_done = not_done * np.logical_and(np.all(next_obs > -100, axis=-1), np.all(next_obs < 100, axis=-1))
         done = ~not_done
         done = done[:, None]
         return done
