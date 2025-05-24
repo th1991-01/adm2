@@ -18,18 +18,21 @@ def get_args():
     parser.add_argument("--env-name", type=str, default="hopper-medium-v2")
     
     # dynamics model parameters
-    parser.add_argument("--dyna-model", type=str, default="sadm", choices=["adm", "sadm"])
+    # "sadm" -- our proposed self-transition any-step dynamics model
+    # "adm"  -- original any-step dynamics model
+    # "en"   -- ensemble dynamics model
+    parser.add_argument("--dyna-model", type=str, default="sadm", choices=["sadm", "adm", "en"])
     parser.add_argument("--model-hidden-dim", type=int, default=200)
     parser.add_argument("--model-lr", type=float, default=3e-4)
     parser.add_argument("--rollout-batch-size", type=int, default=256)
     parser.add_argument("--rollout-length", type=int, default=1000)
     parser.add_argument("--given-reward", type=bool, default=True)
-    parser.add_argument("--load-model", type=bool, default=True)
+    parser.add_argument("--load-model", type=bool, default=False)
     parser.add_argument("--load-label", type=str, default="sadm-sac")
-    parser.add_argument("--load-time", type=str, default="25-0509-173128")
+    parser.add_argument("--load-time", type=str, default="25-0521-145930")
     parser.add_argument("--load-seed", type=int, default=0)
-    # only for any-step dyna model
     parser.add_argument("--max-adm-step", type=int, default=5)                          # maximum length of rnn input
+    # only for sadm
     parser.add_argument("--n-starts", type=int, default=5)
     parser.add_argument("--dev-thresh", type=float, default=0.05)
 
@@ -64,11 +67,11 @@ def get_args():
     parser.add_argument("--ppo-epoch", type=int, default=5)
 
     # replay-buffer parameters (for off-policy algos: sac, td3)
-    parser.add_argument("--buffer-size", type=int, default=int(1e7))
+    parser.add_argument("--buffer-size", type=int, default=int(3e7))
 
     # running parameters
     parser.add_argument("--warmup-steps", type=int, default=50)
-    parser.add_argument("--n-epochs", type=int, default=1500, choices=[1500])
+    parser.add_argument("--n-epochs", type=int, default=2000, choices=[2000])
     parser.add_argument("--step-per-epoch", type=int, default=25)
     parser.add_argument("--updates-per-step", type=int, default=20)
     parser.add_argument("--batch-size", type=int, default=1024)                          # mini-batch size
@@ -103,9 +106,10 @@ def main():
         torch.cuda.manual_seed_all(args.seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-
+        
         runner = ModelSimTrainer(copy.deepcopy(args))
         runner.run()
+        del runner
 
 if __name__ == "__main__":
     main()
