@@ -1,5 +1,6 @@
 import os
 import copy
+import json
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -180,7 +181,9 @@ class ModelSimTrainer(BASETrainer):
                 lr=self.model_lr,
                 batch_size=self.batch_size
             )
-            self._save({"model_loss": holdout_losses})
+            self._save()
+            with open(os.path.join(self.record_dir, "model_record_seed-{}.txt".format(self.seed)), "w") as f:
+                json.dump({"model_loss": holdout_losses}, f)
         
         # build model-based env
         extra_params = {}
