@@ -127,7 +127,8 @@ class ModelSimTrainer(BASETrainer):
         self.dataset = ReplayBufferForSeqSampling(
             buffer_size=1000000,
             obs_shape=args.obs_shape,
-            action_dim=args.action_dim
+            action_dim=args.action_dim,
+            device=args.device,
         )
         rew_bias = 1 if args.env == "maze" else 0
         if args.env == "neorl":
