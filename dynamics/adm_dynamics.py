@@ -184,7 +184,7 @@ class ADMDynamics(nn.Module):
                 break
 
         self.load_state_dict(saved_state_dict)
-        return float(np.mean(holdout_losses))
+        return holdout_losses
     
     def validate_from(self, s, a, r, s_):
         """ validate any-step dynamics model (fixed k-step validation) """

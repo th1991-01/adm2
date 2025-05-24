@@ -191,12 +191,14 @@ class ModelSimEvaluator:
         # roll-out in mujoco env
         mujoco_imgs = []
         obs = copy.deepcopy(init_obs[0]).flatten().cpu().numpy()
+        done = False
         episode_reward = 0
         pbar = tqdm(range(self.rollout_length), desc="Roll-out in MujocoEnv")
         for _ in pbar:
-            action = self.agent.act(obs, deterministic=True).cpu().numpy()
-            obs, reward, _, _ = self.eval_mujoco_env.step(obs, action)
-            episode_reward += reward
+            if not done:
+                action = self.agent.act(obs, deterministic=True).cpu().numpy()
+                obs, reward, done, _ = self.eval_mujoco_env.step(obs, action)
+                episode_reward += reward
             mujoco_imgs.append(self.eval_mujoco_env.env.render(mode="rgb_array"))
             pbar.set_postfix(accum_reward=episode_reward)
             
@@ -212,13 +214,16 @@ class ModelSimEvaluator:
         # roll-out in model env
         model_imgs = []
         obs = copy.deepcopy(init_obs)
+        done = False
         episode_reward = 0
         id = 0
         pbar = tqdm(range(self.rollout_length), desc="Roll-out in ModelEnv")
         for _ in pbar:
-            action = self.agent.act(obs, deterministic=True)
-            obs, reward, _, _, _ = self.eval_model_env.step(action)
-            episode_reward += reward[id].item()
+            if not done:
+                action = self.agent.act(obs, deterministic=True)
+                obs, reward, _, terminated, truncated = self.eval_model_env.step(action)
+                done = terminated[id].item() or truncated[id].item()
+                episode_reward += reward[id].item()
             self.eval_mujoco_env._set_state_from_obs(copy.deepcopy(obs[id]).flatten().cpu().numpy())
             model_imgs.append(self.eval_mujoco_env.env.render(mode="rgb_array"))
             pbar.set_postfix(accum_reward=episode_reward)

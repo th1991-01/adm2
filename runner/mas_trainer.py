@@ -174,13 +174,13 @@ class ModelSimTrainer(BASETrainer):
             self.dyna_model.load_state_dict(state_dict)
         else:
             # learn dynamics model
-            self.dyna_model.learn_from(
+            holdout_losses = self.dyna_model.learn_from(
                 max_adm_step=self.max_adm_step,
                 buffer=self.dataset,
                 lr=self.model_lr,
                 batch_size=self.batch_size
             )
-            self._save({})
+            self._save({"model_loss": holdout_losses})
         
         # build model-based env
         extra_params = {}

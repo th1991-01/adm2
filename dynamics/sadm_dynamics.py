@@ -218,7 +218,7 @@ class SADMDynamics(nn.Module):
                 break
 
         self.load_state_dict(saved_state_dict)
-        return float(np.mean(holdout_losses))
+        return holdout_losses
     
     @ torch.no_grad()
     def validate_from(self, s, a, r, s_):
