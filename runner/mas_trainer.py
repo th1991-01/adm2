@@ -279,7 +279,7 @@ class ModelSimTrainer(BASETrainer):
                 )
 
             # update lr
-            if self.lr_scheduler is not None:
+            if self.lr_scheduler is not None and num_steps >= self.warmup_steps:
                 self.lr_scheduler.step()
 
             # evaluate policy
