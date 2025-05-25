@@ -205,7 +205,8 @@ class ModelSimTrainer(BASETrainer):
         
         eval_init_seqs = self.dataset.sample_all_head_nstep(self.n_starts-1)
         eval_init_seqs["s"] = torch.cat((eval_init_seqs["s"], eval_init_seqs["s_"][:, -1:]), dim=1)
-        extra_params["ood_terminate"] = False
+        if self.ModelSim is SADMSim:
+            extra_params["ood_terminate"] = False
         self.eval_model_env = self.ModelSim(
             dynamics=copy.deepcopy(self.dyna_model),
             static_fn=self.static_fn,
