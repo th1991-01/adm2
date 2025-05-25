@@ -15,7 +15,7 @@ def get_args():
 
     # environment settings
     parser.add_argument("--env", type=str, default="d4rl")
-    parser.add_argument("--env-name", type=str, default="hopper-medium-v2")
+    parser.add_argument("--env-name", type=str, default="halfcheetah-medium-v2")
     
     # dynamics model parameters
     # "sadm" -- our proposed self-transition any-step dynamics model
@@ -71,7 +71,7 @@ def get_args():
 
     # running parameters
     parser.add_argument("--warmup-steps", type=int, default=50)
-    parser.add_argument("--n-epochs", type=int, default=2000, choices=[2000])
+    parser.add_argument("--n-epochs", type=int, default=2000)
     parser.add_argument("--step-per-epoch", type=int, default=25)
     parser.add_argument("--updates-per-step", type=int, default=20)
     parser.add_argument("--batch-size", type=int, default=1024)                          # mini-batch size
