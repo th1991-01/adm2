@@ -1,3 +1,6 @@
-max_adm_step: 5
-auto_alpha: True
+max_adm_step: 2
+model_hidden_dim: 400
+n_starts: 2
 dev_thresh: 0.05
+lr_schedule: True
+n_epochs: 3000

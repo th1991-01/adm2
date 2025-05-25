@@ -1,2 +1,5 @@
 max_adm_step: 5
-auto_alpha: True
+model_hidden_dim: 400
+dev_thresh: 0.05
+auto_alpha: False
+alpha: 0.05
