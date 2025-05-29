@@ -180,7 +180,7 @@ class ModelSimTrainer(BASETrainer):
                 max_adm_step=self.max_adm_step,
                 buffer=self.dataset,
                 lr=self.model_lr,
-                batch_size=self.batch_size
+                batch_size=1024
             )
             self._save({})
             with open(os.path.join(self.record_dir, "model_record_seed-{}.txt".format(self.seed)), "w") as f:

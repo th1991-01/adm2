@@ -9,6 +9,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
+from dynamics.mujoco_oracle_dynamics import MujocoOracleDynamics
 from dynamics.adm_dynamics import ADMDynamics
 from dynamics.sadm_dynamics import SADMDynamics
 from components.static_fns import STATICFUNC
@@ -17,8 +18,8 @@ from buffer.buffer4seqsamp import ReplayBufferForSeqSampling
 from dope_policies import DOPE_POLICY_PATH, DOPEPolicy
 
 
-class OPERunner:
-    """ off-policy evaluation """
+class RolloutEvaluator:
+    """ model-rollout evaluator """
 
     def __init__(self, args):
         if args.env == "neorl":
@@ -101,15 +102,15 @@ class OPERunner:
         # other parameters
         self.max_adm_step = args.max_adm_step
         self.n_starts = min(args.max_adm_step, args.n_starts)
+        self.rollout_batch_size = 100
         self.rollout_length = args.rollout_length
         self.device = args.device
         self.seed = args.seed
         
-        self.n_trajs = args.n_trajs
-        self.gamma = args.gamma
-        self.regret_k = args.regret_k
-        
     def run(self):
+        # mujoco env
+        self.mujoco_env = MujocoOracleDynamics(self.env)
+        
         # build model-based env
         eval_init_seqs = self.dataset.sample_all_head_nstep(self.n_starts-1)
         eval_init_seqs["s"] = torch.cat((eval_init_seqs["s"], eval_init_seqs["s_"][:, -1:]), dim=1)
@@ -119,73 +120,55 @@ class OPERunner:
             max_steps=self.rollout_length,
             init_obs_seqs=eval_init_seqs["s"],
             init_act_seqs=eval_init_seqs["a"],
-            n_parallels=self.n_trajs
+            n_parallels=self.rollout_batch_size
         )
+            
+        # rollout policy
+        policy = self.dope_policies[3]
         
-        # init records
         records = {
-            "model_evaluation": [],
-            "real_env_evaluation": [],
-            "raw_mae": None,
-            "norm_mae": None,
-            "rank_corr": None,
-            f"regret@{self.regret_k}": None
+            "rollout_length": [],
+            "prediction_error_mean": [],
+            "prediction_error_std": [],
+            "prediction_error_max": [],
+            "prediction_error_min": []
         }
+        
+        cnts = [0] * self.rollout_length
+        errors = [0] * self.rollout_length
+        rollout_times = []
             
-        # roll-out in model
-        for cnt in tqdm(range(len(self.dope_policies)), desc="Roll-out in Model"):
-            policy = self.dope_policies[cnt]
-            model_obs = self.eval_model_env.reset_all()
-            done = torch.tensor([False]*model_obs.shape[0], dtype=torch.bool, device=self.device)
-            episode_reward = torch.tensor([0]*model_obs.shape[0], dtype=torch.float32, device=self.device)
-            for t in range(self.rollout_length):
+        # roll-out in model env
+        init_obs = self.eval_model_env.reset_all()
+        model_obs = copy.deepcopy(init_obs).cpu().numpy()
+        mujoco_obs = copy.deepcopy(init_obs).cpu().numpy()
+        done = torch.tensor([False]*model_obs.shape[0])
+        pbar = tqdm(range(self.rollout_length), desc="Roll-out in ModelEnv")
+        for step in pbar:
+            if not done.all():
+                action = policy.select_action(model_obs, deterministic=True)
+                action_torch = torch.as_tensor(action, dtype=torch.float32, device=self.device)
+                start = time.time()
+                model_obs, _, _, terminated, truncated = self.eval_model_env.step(action_torch)
+                end = time.time()
+                rollout_times.append((end - start)*1000)
+                done[terminated.flatten() | truncated.flatten()] = True
+                
+                for id in range(mujoco_obs.shape[0]):
+                    mujoco_obs[id], _, _, _ = self.mujoco_env.step(mujoco_obs[id], action[id])
+                    
                 if not done.all():
-                    action = policy.select_action(model_obs, deterministic=True)
-                    action_torch = torch.as_tensor(action, dtype=torch.float32, device=self.device)
-                    model_obs, reward, _, terminated, truncated = self.eval_model_env.step(action_torch)
-                    episode_reward[~done] += self.gamma**t * reward.flatten()[~done]
-                    done[terminated.flatten() | truncated.flatten()] = True
-            records["model_evaluation"].append(float(episode_reward.mean().item()))
-        
-        # roll-out in model
-        for cnt in tqdm(range(len(self.dope_policies)), desc="Roll-out in Real Env"):
-            policy = self.dope_policies[cnt]
-            episode_rewards = self._eval_policy(policy)
-            records["real_env_evaluation"].append(float(np.mean(episode_rewards)))
+                    rollout_error = np.mean(np.square(model_obs.cpu().numpy() - mujoco_obs), axis=-1)
+                    rollout_error = rollout_error[~done]
+                    rollout_error_mean = np.mean(rollout_error)
+                    
+                    records["rollout_length"].append(step + 1)
+                    records["prediction_error_mean"].append(float(rollout_error_mean))
+                    records["prediction_error_std"].append(float(np.std(rollout_error)))
+                    records["prediction_error_max"].append(float(np.max(rollout_error)))
+                    records["prediction_error_min"].append(float(np.min(rollout_error)))
+                    
+            pbar.set_postfix(rollout_error=rollout_error_mean, rollout_time_per_step=np.mean(rollout_times))
             
-        model_values = np.array(records["model_evaluation"])
-        real_values = np.array(records["real_env_evaluation"])
-        value_min, value_max = real_values.min(), real_values.max()
-        norm_model_values = (model_values - value_min) / (value_max - value_min)
-        norm_real_values = (real_values - value_min) / (value_max - value_min)
-        
-        top_ids = np.argsort(norm_model_values)[-self.regret_k:]
-        regret = norm_real_values.max() - norm_real_values[top_ids].max()
-        
-        records["raw_mae"] = np.abs(model_values - real_values).mean()
-        records["norm_mae"] = np.abs(norm_model_values - norm_real_values).mean()
-        records["rank_corr"] = np.corrcoef(norm_real_values, norm_model_values)[0, 1]
-        records[f"regret@{self.regret_k}"] = regret
-        
-        print(f"raw absolute error: {records['raw_mae']}")
-        print(f"normalized absolute error: {records['norm_mae']}")
-        print(f"rank correlation: {records['rank_corr']}")
-        print(f"regret@{self.regret_k}: {records[f'regret@{self.regret_k}']}")
-            
-        with open(os.path.join(self.record_dir, "ope_seed-{}.txt".format(self.load_seed)), "w") as f:
+        with open(os.path.join(self.record_dir, "rollout_error_seed-{}.txt".format(self.load_seed)), "w") as f:
             json.dump(records, f)
-            
-    def _eval_policy(self, policy):
-        """ evaluate policy """
-        episode_rewards = []
-        for _ in range(self.n_trajs):
-            done = False
-            episode_rewards.append(0)
-            obs = self.env.reset()
-            t = 0
-            while not done:
-                action = policy.select_action(obs, deterministic=True).flatten()
-                obs, reward, done, _ = self.env.step(action)
-                episode_rewards[-1] += self.gamma**t * reward
-                t += 1
-        return episode_rewards
