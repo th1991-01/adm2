@@ -162,7 +162,6 @@ class ModelSimTrainer(BASETrainer):
         self.n_starts = min(args.max_adm_step, args.n_starts)
         self.rollout_batch_size = args.rollout_batch_size
         self.rollout_length = args.rollout_length
-        self.dev_thresh = args.dev_thresh
         self.warmup_steps = args.warmup_steps
         self.n_epochs = args.n_epochs
         self.step_per_epoch = args.step_per_epoch
@@ -187,10 +186,6 @@ class ModelSimTrainer(BASETrainer):
                 json.dump({"model_loss": holdout_losses}, f)
         
         # build model-based env
-        extra_params = {}
-        if self.ModelSim is SADMSim:
-            extra_params["ood_terminate"] = True
-            extra_params["dev_thresh"] = self.dev_thresh
         init_seqs = self.dataset.sample_all_nstep(self.n_starts-1)
         init_seqs["s"] = torch.cat((init_seqs["s"], init_seqs["s_"][:, -1:]), dim=1)
         self.model_env = self.ModelSim(
@@ -200,13 +195,10 @@ class ModelSimTrainer(BASETrainer):
             init_obs_seqs=init_seqs["s"],
             init_act_seqs=init_seqs["a"],
             n_parallels=self.rollout_batch_size,
-            **extra_params
         )
         
         eval_init_seqs = self.dataset.sample_all_head_nstep(self.n_starts-1)
         eval_init_seqs["s"] = torch.cat((eval_init_seqs["s"], eval_init_seqs["s_"][:, -1:]), dim=1)
-        if self.ModelSim is SADMSim:
-            extra_params["ood_terminate"] = False
         self.eval_model_env = self.ModelSim(
             dynamics=copy.deepcopy(self.dyna_model),
             static_fn=self.static_fn,
@@ -214,7 +206,6 @@ class ModelSimTrainer(BASETrainer):
             init_obs_seqs=eval_init_seqs["s"],
             init_act_seqs=eval_init_seqs["a"],
             n_parallels=self.eval_n_episodes,
-            **extra_params
         )
         
         if self.off_policy:

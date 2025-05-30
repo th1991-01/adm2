@@ -1,2 +1,1 @@
-max_adm_step: 10
-auto_alpha: False
+max_adm_step: 5

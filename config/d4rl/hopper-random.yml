@@ -1,3 +1,5 @@
 max_adm_step: 5
-auto_alpha: True
-alpha: 0.05
+model_hidden_dim: 100
+penalty_coef: 20
+auto_alpha: False
+alpha: 0.25

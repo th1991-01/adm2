@@ -90,9 +90,6 @@ class SADMDynamics(nn.Module):
         obs = (obs - self.obs_mu) / self.obs_std
         return self.model.encode_obs(obs)
     
-    def decode_h(self, h_state):
-        return self.model.decode_h(h_state)
-    
     def init_hiddens(self, obs_seq, act_seq):
         # obs_seq: (bs, m, -1)
         # act_seq: (bs, m-1, -1)
@@ -143,7 +140,6 @@ class SADMDynamics(nn.Module):
 
         epoch = 0
         holdout_losses = [1e10] * max_adm_step
-        eval_recon_loss = 1e10
         cnt = 0
 
         while True:
@@ -168,12 +164,6 @@ class SADMDynamics(nn.Module):
                 loss = mse_loss + var_loss
                 # loss = loss + 0.01 * self.dynamics.max_logvar.sum() - 0.01 * self.dynamics.min_logvar.sum()
                 
-                # recon loss
-                h_ = self.encode_obs(s_)
-                s_recon = self.decode_h(h_)
-                recon_loss = torch.pow(s_recon - s_, 2).mean()
-                loss += 0.1 * recon_loss
-                
                 # backward
                 optim.zero_grad()
                 loss.backward()
@@ -182,7 +172,6 @@ class SADMDynamics(nn.Module):
                 pbar.set_postfix(
                     train_loss=loss.item(),
                     holdout_loss=np.mean(holdout_losses),
-                    recon_loss=eval_recon_loss
                 )
 
             new_val_losses, improve_ks = [], []
@@ -200,12 +189,6 @@ class SADMDynamics(nn.Module):
                 k_improvement = (holdout_losses[k-1] - k_val_loss) / holdout_losses[k-1]
                 if k_improvement > 0:
                     improve_ks.append(k)
-                    
-            with torch.no_grad():
-                s_ = torch.cat(s_list, dim=0)
-                h_ = self.encode_obs(s_)
-                s_recon = self.decode_h(h_)
-                eval_recon_loss = float(torch.pow(s_recon-s_, 2).mean().cpu().numpy())
 
             if len(improve_ks) > 0 and np.mean(new_val_losses) < np.mean(holdout_losses):
                 saved_state_dict = copy.deepcopy(self.state_dict())

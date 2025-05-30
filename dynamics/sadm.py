@@ -72,14 +72,6 @@ class SADModel(nn.Module):
             num_layers=rnn_num_layers,
             batch_first=True
         )
-        # h to obs
-        self.decoder = nn.Sequential(
-            nn.Linear(hidden_dim*rnn_num_layers, hidden_dim),
-            ResBlock(hidden_dim, hidden_dim, dropout=dropout),
-            ResBlock(hidden_dim, hidden_dim, dropout=dropout),
-            ResBlock(hidden_dim, hidden_dim, dropout=dropout),
-            nn.Linear(hidden_dim, self.obs_dim)
-        )
         # h to delta obs
         self.out_layer = nn.Sequential(
             nn.Linear(hidden_dim*2, hidden_dim),
@@ -107,10 +99,6 @@ class SADModel(nn.Module):
     def encode_obs(self, obs):
         # obs: (bs, -1)
         return self.encoder(obs)
-    
-    def decode_h(self, h_state):
-        # h_state: (bs, -1)
-        return self.decoder(h_state)
     
     def init_hiddens(self, obs_seq, act_seq):
         # obs_seq: (bs, m, -1)

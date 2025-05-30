@@ -24,27 +24,26 @@ def get_args():
     parser.add_argument("--dyna-model", type=str, default="sadm", choices=["sadm", "adm", "en"])
     parser.add_argument("--model-hidden-dim", type=int, default=200)
     parser.add_argument("--model-lr", type=float, default=3e-4)
-    parser.add_argument("--rollout-batch-size", type=int, default=256)
+    parser.add_argument("--rollout-batch-size", type=int, default=4096)
     parser.add_argument("--rollout-length", type=int, default=1000)
     parser.add_argument("--given-reward", type=bool, default=True)
     parser.add_argument("--load-model", type=bool, default=False)
     parser.add_argument("--load-label", type=str, default="sadm-sac")
-    parser.add_argument("--load-time", type=str, default="25-0521-145930")
+    parser.add_argument("--load-time", type=str, default="25-0526-094150")
     parser.add_argument("--load-seed", type=int, default=0)
     parser.add_argument("--max-adm-step", type=int, default=5)                          # maximum length of rnn input
     # only for sadm
     parser.add_argument("--n-starts", type=int, default=5)
-    parser.add_argument("--dev-thresh", type=float, default=0.05)
 
     # policy parameters
     parser.add_argument("--algo", type=str, default="sac", choices=["sac", "td3", "ppo"])
     parser.add_argument("--ac-hidden-dims", type=list, default=[256, 256])              # dimensions of actor/critic hidden layers
     parser.add_argument("--actor-lr", type=float, default=1e-4)                         # learning rate of actor
-    parser.add_argument("--lr-schedule", type=bool, default=False)
+    parser.add_argument("--lr-schedule", type=bool, default=True)
     parser.add_argument("--critic-lr", type=float, default=3e-4)                        # learning rate of critic
     parser.add_argument("--gamma", type=float, default=0.99)                            # discount factor
     parser.add_argument("--tau", type=float, default=0.005)                             # update rate of target network
-    parser.add_argument("--penalty-coef", type=float, default=0)                        # penalty coefficient
+    parser.add_argument("--penalty-coef", type=float, default=5)                        # penalty coefficient
     # for SAC
     parser.add_argument("--alpha", type=float, default=0.05)                            # weight of entropy
     parser.add_argument("--auto-alpha", type=bool, default=True)                        # auto alpha adjustment
@@ -67,7 +66,7 @@ def get_args():
     parser.add_argument("--ppo-epoch", type=int, default=5)
 
     # replay-buffer parameters (for off-policy algos: sac, td3)
-    parser.add_argument("--buffer-size", type=int, default=int(3e7))
+    parser.add_argument("--buffer-size", type=int, default=int(1e7))
 
     # running parameters
     parser.add_argument("--warmup-steps", type=int, default=50)

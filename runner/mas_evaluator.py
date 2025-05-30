@@ -174,7 +174,6 @@ class ModelSimEvaluator:
         self.eval_mujoco_env = MujocoOracleDynamics(self.env)
         
         # build model-based env
-        extra_params = {"ood_terminate": True}
         eval_init_seqs = self.dataset.sample_all_head_nstep(self.n_starts-1)
         eval_init_seqs["s"] = torch.cat((eval_init_seqs["s"], eval_init_seqs["s_"][:, -1:]), dim=1)
         self.eval_model_env = self.ModelSim(
@@ -184,7 +183,6 @@ class ModelSimEvaluator:
             init_obs_seqs=eval_init_seqs["s"],
             init_act_seqs=eval_init_seqs["a"],
             n_parallels=self.rollout_batch_size,
-            **extra_params
         )
         init_obs = self.eval_model_env.reset_all()
         

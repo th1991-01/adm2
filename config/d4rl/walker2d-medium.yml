@@ -1,4 +1,2 @@
 max_adm_step: 5
-rollout_batch_size: 1024
-dev_thresh: 1
-auto_alpha: True
+penalty_coef: 10

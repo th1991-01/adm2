@@ -91,17 +91,13 @@ class SADMSim(ADMSim):
         max_steps,
         init_obs_seqs,
         init_act_seqs,
-        n_parallels,
-        ood_terminate=False,
-        dev_thresh=1.0
+        n_parallels
     ):
         super().__init__(
             dynamics, static_fn, max_steps,
             init_obs_seqs, init_act_seqs, n_parallels
         )
         self.max_adm_step = self.dynamics.max_adm_step
-        self.ood_terminate = ood_terminate
-        self.dev_thresh = dev_thresh
         
     @ torch.no_grad()
     def reset_all(self):
@@ -151,14 +147,6 @@ class SADMSim(ADMSim):
         )
         terminated = torch.as_tensor(terminated, dtype=torch.bool, device=next_obs.device)
         truncated = self._cnt >= self.max_steps
-        
-        # fix terminated
-        if self.ood_terminate:
-            next_h = self.dynamics.encode_obs(next_obs)
-            next_obs_recon = self.dynamics.decode_h(next_h)
-            ood_terminated = torch.pow(next_obs_recon-next_obs, 2) > self.dev_thresh
-            ood_terminated = ood_terminated.any(dim=-1)
-            terminated[ood_terminated] = True
         
         residual = (self._cnt + self.m - 1) % self.max_adm_step
         h_update_ids = torch.where((residual >= 0) & (residual < self.m))[0]
