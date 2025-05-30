@@ -43,7 +43,7 @@ def get_args():
     parser.add_argument("--critic-lr", type=float, default=3e-4)                        # learning rate of critic
     parser.add_argument("--gamma", type=float, default=0.99)                            # discount factor
     parser.add_argument("--tau", type=float, default=0.005)                             # update rate of target network
-    parser.add_argument("--penalty-coef", type=float, default=5)                        # penalty coefficient
+    parser.add_argument("--penalty-coef", type=float, default=30)                       # penalty coefficient
     # for SAC
     parser.add_argument("--alpha", type=float, default=0.05)                            # weight of entropy
     parser.add_argument("--auto-alpha", type=bool, default=True)                        # auto alpha adjustment
