@@ -116,6 +116,7 @@ class ModelSimTrainer(BASETrainer):
             
         self.agent.train()
         self.penalty_coef = args.penalty_coef
+        self.real_ratio = args.real_ratio
 
         # lr schedule
         if args.lr_schedule:
@@ -162,6 +163,7 @@ class ModelSimTrainer(BASETrainer):
         self.n_starts = min(args.max_adm_step, args.n_starts)
         self.rollout_batch_size = args.rollout_batch_size
         self.rollout_length = args.rollout_length
+        self.given_reward = args.given_reward
         self.warmup_steps = args.warmup_steps
         self.n_epochs = args.n_epochs
         self.step_per_epoch = args.step_per_epoch
@@ -195,6 +197,7 @@ class ModelSimTrainer(BASETrainer):
             init_obs_seqs=init_seqs["s"],
             init_act_seqs=init_seqs["a"],
             n_parallels=self.rollout_batch_size,
+            given_reward=self.given_reward
         )
         
         eval_init_seqs = self.dataset.sample_all_head_nstep(self.n_starts-1)
@@ -206,6 +209,7 @@ class ModelSimTrainer(BASETrainer):
             init_obs_seqs=eval_init_seqs["s"],
             init_act_seqs=eval_init_seqs["a"],
             n_parallels=self.eval_n_episodes,
+            given_reward=self.given_reward
         )
         
         if self.off_policy:
@@ -254,7 +258,12 @@ class ModelSimTrainer(BASETrainer):
                 # update policy
                 if num_steps >= self.warmup_steps:
                     for _ in range(self.updates_per_step):
-                        batch = self.model_memory.sample(batch_size=self.batch_size)
+                        real_sample_size = int(self.batch_size*self.real_ratio)
+                        model_sample_size = self.batch_size - real_sample_size
+                        real_batch = self.dataset.sample(batch_size=real_sample_size)
+                        model_batch = self.model_memory.sample(batch_size=model_sample_size)
+                        batch = {key: torch.cat(
+                            (real_batch[key], model_batch[key]), axis=0) for key in real_batch.keys()}
                         batch.pop("timeout")
                         learning_info = self.agent.learn(**batch)
                         actor_loss = learning_info["loss"]["actor"]

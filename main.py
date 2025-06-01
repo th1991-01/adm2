@@ -15,7 +15,7 @@ def get_args():
 
     # environment settings
     parser.add_argument("--env", type=str, default="d4rl")
-    parser.add_argument("--env-name", type=str, default="halfcheetah-medium-v2")
+    parser.add_argument("--env-name", type=str, default="hopper-random-v2")
     
     # dynamics model parameters
     # "sadm" -- our proposed self-transition any-step dynamics model
@@ -29,13 +29,13 @@ def get_args():
     parser.add_argument("--given-reward", type=bool, default=True)
     parser.add_argument("--load-model", type=bool, default=False)
     parser.add_argument("--load-label", type=str, default="sadm-sac")
-    parser.add_argument("--load-time", type=str, default="25-0526-094150")
+    parser.add_argument("--load-time", type=str, default="25-0531-001907")
     parser.add_argument("--load-seed", type=int, default=0)
     parser.add_argument("--max-adm-step", type=int, default=5)                          # maximum length of rnn input
     # only for sadm
     parser.add_argument("--n-starts", type=int, default=5)
 
-    # policy parameters
+    # policy optimization parameters
     parser.add_argument("--algo", type=str, default="sac", choices=["sac", "td3", "ppo"])
     parser.add_argument("--ac-hidden-dims", type=list, default=[256, 256])              # dimensions of actor/critic hidden layers
     parser.add_argument("--actor-lr", type=float, default=1e-4)                         # learning rate of actor
@@ -43,7 +43,8 @@ def get_args():
     parser.add_argument("--critic-lr", type=float, default=3e-4)                        # learning rate of critic
     parser.add_argument("--gamma", type=float, default=0.99)                            # discount factor
     parser.add_argument("--tau", type=float, default=0.005)                             # update rate of target network
-    parser.add_argument("--penalty-coef", type=float, default=30)                       # penalty coefficient
+    parser.add_argument("--penalty-coef", type=float, default=5)                        # penalty coefficient
+    parser.add_argument("--real-ratio", type=float, default=0.05)
     # for SAC
     parser.add_argument("--alpha", type=float, default=0.05)                            # weight of entropy
     parser.add_argument("--auto-alpha", type=bool, default=True)                        # auto alpha adjustment
