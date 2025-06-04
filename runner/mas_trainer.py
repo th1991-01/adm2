@@ -244,7 +244,6 @@ class ModelSimTrainer(BASETrainer):
             for _ in pbar:
                 # step
                 action = self.agent.act(obs)
-                # next_obs, reward, terminated, truncated = self.model_env.step(action)
                 next_obs, reward, uncertainty, terminated, truncated = self.model_env.step(action)
                 reward -= self.penalty_coef * uncertainty
                 terminal = terminated | truncated
@@ -366,7 +365,6 @@ class ModelSimTrainer(BASETrainer):
             for _ in pbar:
                 # step
                 action, log_prob, value = self.agent.act_and_value(obs)
-                # next_obs, reward, terminated, truncated = self.model_env.step(action)
                 next_obs, reward, uncertainty, terminated, truncated = self.model_env.step(action)
                 reward -= self.penalty_coef * uncertainty
                 terminal = terminated | truncated
