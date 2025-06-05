@@ -15,7 +15,7 @@ def get_args():
 
     # environment settings
     parser.add_argument("--env", type=str, default="d4rl")
-    parser.add_argument("--env-name", type=str, default="hopper-random-v2")
+    parser.add_argument("--env-name", type=str, default="hopper-medium-v2")
     
     # dynamics model parameters
     # "sadm" -- our proposed self-transition any-step dynamics model
@@ -26,7 +26,7 @@ def get_args():
     parser.add_argument("--model-lr", type=float, default=3e-4)
     parser.add_argument("--rollout-batch-size", type=int, default=4096)
     parser.add_argument("--rollout-length", type=int, default=1000)
-    parser.add_argument("--given-reward", type=bool, default=True)
+    parser.add_argument("--given-reward", type=bool, default=False)
     parser.add_argument("--load-model", type=bool, default=False)
     parser.add_argument("--load-label", type=str, default="sadm-sac")
     parser.add_argument("--load-time", type=str, default="25-0531-001907")
@@ -36,7 +36,7 @@ def get_args():
     parser.add_argument("--n-starts", type=int, default=5)
 
     # policy optimization parameters
-    parser.add_argument("--algo", type=str, default="sac", choices=["sac", "td3", "ppo"])
+    parser.add_argument("--algo", type=str, default="sac", choices=["sac", "td3"])
     parser.add_argument("--ac-hidden-dims", type=list, default=[256, 256])              # dimensions of actor/critic hidden layers
     parser.add_argument("--actor-lr", type=float, default=1e-4)                         # learning rate of actor
     parser.add_argument("--lr-schedule", type=bool, default=True)
