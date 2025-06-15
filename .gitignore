@@ -9,7 +9,6 @@
 **/.vscode
 **/_log
 result/
-config/
 scripts/
 
 # Byte-compiled / optimized / DLL files
