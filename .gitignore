@@ -8,7 +8,9 @@
 **/*.txt
 **/.vscode
 **/_log
-<<<<<<< HEAD
+result/
+config/
+scripts/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -172,6 +174,3 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-=======
-.DS_Store
->>>>>>> 2764597422ed9546da4850aefa6a47b9f014d4bf
