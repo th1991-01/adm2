@@ -5,6 +5,7 @@ import json
 import d4rl
 import neorl
 import datetime
+import pprint
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
@@ -62,6 +63,8 @@ class BASETrainer:
             self.load_dir = None
 
         self.logger = SummaryWriter(self.log_dir)
+        pp = pprint.PrettyPrinter(indent=4)
+        self.logger.add_text('hyperparameters', pp.pformat(self.args_dict))
         with open(os.path.join(self.record_dir, "hyper_param.json"), "w") as f:
             json.dump(self.args_dict, f)
 
