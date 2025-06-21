@@ -1,2 +1,7 @@
 max_adm_step: 5
-penalty_coef: 10
+n_starts: 5
+penalty_coef: 2.5
+auto_alpha: False
+alpha: 0.05
+lr_schedule: False
+n_epochs: 3000
