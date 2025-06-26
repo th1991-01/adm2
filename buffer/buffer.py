@@ -79,14 +79,15 @@ class ReplayBuffer:
             self.reset()
 
         start_indexes = dataset["index"]
-        for i in tqdm(range(N-1), desc="Loading dataset (in tensor)"):
-            obs = torch.as_tensor(dataset["obs"][i], dtype=torch.float32, device=self.device)
-            next_obs = torch.as_tensor(dataset["next_obs"][i], dtype=torch.float32, device=self.device)
-            action = torch.as_tensor(dataset["action"][i], dtype=torch.float32, device=self.device)
-            reward = torch.as_tensor(dataset["reward"][i], dtype=torch.float32, device=self.device)
-            done = bool(dataset["done"][i])
-            timeout = (i + 1 in start_indexes)
-            self.store(obs, action, reward + rew_bias, next_obs, done, timeout)
+        self.memory["s"][:N] = torch.as_tensor(dataset["obs"], dtype=torch.float32, device=self.device)
+        self.memory["a"][:N] = torch.as_tensor(dataset["action"], dtype=torch.float32, device=self.device)
+        self.memory["r"][:N] = torch.as_tensor(dataset["reward"], dtype=torch.float32, device=self.device).reshape(-1, 1) + rew_bias
+        self.memory["s_"][:N] = torch.as_tensor(dataset["next_obs"], dtype=torch.float32, device=self.device)
+        self.memory["done"][:N] = torch.as_tensor(dataset["done"], dtype=torch.float32, device=self.device).reshape(-1, 1)
+        self.memory["timeout"][:N] = torch.as_tensor([False]*N, dtype=torch.float32, device=self.device).reshape(-1, 1)
+        self.memory["timeout"][start_indexes[1:]-1] = 1
+        self.cnt = N
+        self.size = N
 
     def cal_mu_std(self):
         """ calculate mean and std of obs and action """

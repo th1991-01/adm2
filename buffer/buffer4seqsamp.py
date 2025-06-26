@@ -42,6 +42,20 @@ class ReplayBufferForSeqSampling(ReplayBuffer):
                 if i + 1 < self.size:
                     self.cur_epi_start = i + 1
                     self.epi_starts.append(self.cur_epi_start)
+                    
+    def load_neorl_dataset(self, dataset, reward_bias=0.0):
+        """ load dataset """
+        super().load_neorl_dataset(dataset, reward_bias)
+        self.dist_from_end = np.zeros(self.capacity, dtype=np.float32)
+        self.epi_starts = []
+        self.cur_epi_start = 0
+        
+        for i in tqdm(range(self.cnt), desc="Preparing dataset"):
+            self.dist_from_end[self.cur_epi_start:i+1] += 1
+            if self.memory["done"][i].item() == 1 or self.memory["timeout"][i].item() == 1:
+                if i + 1 < self.size:
+                    self.cur_epi_start = i + 1
+                    self.epi_starts.append(self.cur_epi_start)
 
     def sample_nstep(self, batch_size, nstep, start_idx=None, end_idx=None):
         """ sample a batch of {nstep} data """
