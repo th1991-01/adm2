@@ -1,7 +1,5 @@
 n_starts: 5
-rollout_batch_size: 4096
-real_ratio: 0.05
-penalty_coef: 0.5
-auto_alpha: True
-alpha: 0.05
 n_epochs: 2000
+auto_alpha: False
+alpha: 0.3
+penalty_coef: 25
