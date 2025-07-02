@@ -1,1 +1,8 @@
-max_adm_step: 3
+max_adm_step: 5
+n_starts: 5
+real_ratio: 0.06
+penalty_coef: 2.5
+auto_alpha: False
+alpha: 0.05
+lr_schedule: False
+n_epochs: 3000
