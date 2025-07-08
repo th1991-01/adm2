@@ -26,6 +26,12 @@ class BASETrainer:
 
         self.eval_env = self.make_env(args.env_name)
         self.eval_env.action_space.seed(args.seed)
+        
+        if args.env == "neorl":
+            env_to_get_score = gym.make(args.env_name.split('-')[0].lower() + "-medium-v2")
+        else:
+            env_to_get_score = self.eval_env
+        self.score_func = lambda reward: env_to_get_score.get_normalized_score(reward)
 
         if args.env == "adroit" or args.env == "maze":
             self.env.seed(args.seed)

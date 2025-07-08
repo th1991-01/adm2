@@ -325,13 +325,12 @@ class ModelSimTrainer(BASETrainer):
             self.logger.add_scalar("eval/length", eval_length, e)
             self.logger.add_scalar("eval/length_in_model", eval_length_in_model, e)
 
-            if hasattr(self.eval_env, "get_normalized_score"):
-                records["score_mean"].append(self.eval_env.get_normalized_score(records["reward_mean"][-1])*100)
-                records["score_std"].append(self.eval_env.get_normalized_score(records["reward_std"][-1])*100)
-                records["score_min"].append(self.eval_env.get_normalized_score(records["reward_min"][-1])*100)
-                records["score_max"].append(self.eval_env.get_normalized_score(records["reward_max"][-1])*100)
-                eval_score = self.eval_env.get_normalized_score(eval_reward)*100
-                self.logger.add_scalar("eval/score", eval_score, e)
+            records["score_mean"].append(self.score_func(records["reward_mean"][-1])*100)
+            records["score_std"].append(self.score_func(records["reward_std"][-1])*100)
+            records["score_min"].append(self.score_func(records["reward_min"][-1])*100)
+            records["score_max"].append(self.score_func(records["reward_max"][-1])*100)
+            eval_score = self.score_func(eval_reward)*100
+            self.logger.add_scalar("eval/score", eval_score, e)
 
             # save
             self._save(records)
@@ -446,13 +445,12 @@ class ModelSimTrainer(BASETrainer):
             self.logger.add_scalar("eval/reward_in_model", eval_reward_in_model, e)
             self.logger.add_scalar("eval/length_in_model", eval_length_in_model, e)
 
-            if hasattr(self.eval_env, "get_normalized_score"):
-                records["score_mean"].append(self.eval_env.get_normalized_score(records["reward_mean"][-1])*100)
-                records["score_std"].append(self.eval_env.get_normalized_score(records["reward_std"][-1])*100)
-                records["score_min"].append(self.eval_env.get_normalized_score(records["reward_min"][-1])*100)
-                records["score_max"].append(self.eval_env.get_normalized_score(records["reward_max"][-1])*100)
-                eval_score = self.eval_env.get_normalized_score(eval_reward)*100
-                self.logger.add_scalar("eval/score", eval_score, e)
+            records["score_mean"].append(self.score_func(records["reward_mean"][-1])*100)
+            records["score_std"].append(self.score_func(records["reward_std"][-1])*100)
+            records["score_min"].append(self.score_func(records["reward_min"][-1])*100)
+            records["score_max"].append(self.score_func(records["reward_max"][-1])*100)
+            eval_score = self.score_func(eval_reward)*100
+            self.logger.add_scalar("eval/score", eval_score, e)
 
             # save
             self._save(records)
