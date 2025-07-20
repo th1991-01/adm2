@@ -68,10 +68,22 @@ class ADMDynamics(nn.Module):
         self.obs_std.data = torch.as_tensor(obs_std, dtype=torch.float32, device=self.device)
         self.act_mu.data = torch.as_tensor(act_mu, dtype=torch.float32, device=self.device)
         self.act_std.data = torch.as_tensor(act_std, dtype=torch.float32, device=self.device)
+        
+    @ torch.no_grad()
+    def delta_obs_and_h(self, obs, action):
+        # shape@obs: (bs, obs_dim)
+        # shape@actions: (bs, h_step, act_dim)
+        # normalization
+        _obs = (obs - self.obs_mu) / self.obs_std
+        _action = (action - self.act_mu) / self.act_std
+
+        model_out, h = self.model(_obs, _action)
+        mean, _ = torch.chunk(model_out, 2, dim=-1)
+        return mean[:, :-1], h
 
     def forward(self, obs, action):
         # shape@obs: (bs, obs_dim)
-        # shape@actoins: (bs, h_step, act_dim)
+        # shape@actions: (bs, h_step, act_dim)
         # normalization
         _obs = (obs - self.obs_mu) / self.obs_std
         _action = (action - self.act_mu) / self.act_std

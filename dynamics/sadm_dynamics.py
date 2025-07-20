@@ -73,10 +73,22 @@ class SADMDynamics(nn.Module):
     def set_max_min(self, obs_max, obs_min):
         self.obs_max = torch.as_tensor(obs_max, dtype=torch.float32, device=self.device)
         self.obs_min = torch.as_tensor(obs_min, dtype=torch.float32, device=self.device)
+        
+    @ torch.no_grad()
+    def delta_obs_and_h(self, obs, action):
+        # shape@obs: (bs, obs_dim)
+        # shape@actions: (bs, h_step, act_dim)
+        # normalization
+        _obs = (obs - self.obs_mu) / self.obs_std
+        _action = (action - self.act_mu) / self.act_std
+
+        model_out, h = self.model(_obs, _action)
+        mean, _ = torch.chunk(model_out, 2, dim=-1)
+        return mean[:, :-1], h
 
     def forward(self, obs, action):
         # shape@obs: (bs, obs_dim)
-        # shape@actoins: (bs, h_step, act_dim)
+        # shape@actions: (bs, h_step, act_dim)
         # normalization
         _obs = (obs - self.obs_mu) / self.obs_std
         _action = (action - self.act_mu) / self.act_std
