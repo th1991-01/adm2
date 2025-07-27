@@ -218,7 +218,7 @@ class EnSim(gym.Env):
             
         # random choice
         k = np.random.randint(self.dynamics.model.num_elites)
-        next_obs = torch.normal(next_obs_means[k], next_obs_stds[k].clamp(0))
+        next_obs = torch.normal(next_obs_means[k], torch.nan_to_num(next_obs_stds[k], nan=1e-6, posinf=1e-6, neginf=1e-6).clamp(min=1e-6))
         if self.given_reward:
             reward = self.static_fn.reward_fn(
                 self._obs_seq[:, -1].detach().cpu().numpy(),
