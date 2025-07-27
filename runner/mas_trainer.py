@@ -8,8 +8,9 @@ from tqdm import tqdm
 from dynamics.adm_dynamics import ADMDynamics
 from dynamics.sadm_dynamics import SADMDynamics
 from dynamics.ensemble_dynamics import EnsembleDynamics
+from dynamics.rnn_dynamics import RNNDynamics
 from components.static_fns import STATICFUNC
-from env.model_as_sim import ADMSim, SADMSim, EnSim
+from env.model_as_sim import ADMSim, SADMSim, EnSim, RNNSim
 from agent.sac import SACAgent
 from agent.td3 import TD3Agent
 from agent.ppo import PPOAgent
@@ -60,6 +61,15 @@ class ModelSimTrainer(BASETrainer):
                 device=args.device
             )
             self.ModelSim = EnSim
+        elif args.dyna_model == "rnn":
+            self.dyna_model = RNNDynamics(
+                obs_dim=np.prod(args.obs_shape),
+                action_dim=args.action_dim,
+                hidden_dim=args.model_hidden_dim,
+                max_adm_step=args.max_adm_step,
+                device=args.device
+            )
+            self.ModelSim = RNNSim
         
         self.on_policy = False
         self.off_policy = False
