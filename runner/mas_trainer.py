@@ -7,8 +7,10 @@ from tqdm import tqdm
 
 from dynamics.adm_dynamics import ADMDynamics
 from dynamics.sadm_dynamics import SADMDynamics
+from dynamics.ensemble_dynamics import EnsembleDynamics
+from dynamics.rnn_dynamics import RNNDynamics
 from components.static_fns import STATICFUNC
-from env.model_as_sim import ADMSim, SADMSim
+from env.model_as_sim import ADMSim, SADMSim, EnSim, RNNSim
 from agent.sac import SACAgent
 from agent.td3 import TD3Agent
 from agent.ppo import PPOAgent
@@ -52,6 +54,22 @@ class ModelSimTrainer(BASETrainer):
                 device=args.device
             )
             self.ModelSim = SADMSim
+        elif args.dyna_model == "en":
+            self.dyna_model = EnsembleDynamics(
+                obs_dim=np.prod(args.obs_shape),
+                action_dim=args.action_dim,
+                device=args.device
+            )
+            self.ModelSim = EnSim
+        elif args.dyna_model == "rnn":
+            self.dyna_model = RNNDynamics(
+                obs_dim=np.prod(args.obs_shape),
+                action_dim=args.action_dim,
+                hidden_dim=args.model_hidden_dim,
+                max_adm_step=args.max_adm_step,
+                device=args.device
+            )
+            self.ModelSim = RNNSim
         
         self.on_policy = False
         self.off_policy = False
@@ -177,12 +195,19 @@ class ModelSimTrainer(BASETrainer):
             self.dyna_model.load_state_dict(state_dict)
         else:
             # learn dynamics model
-            holdout_losses = self.dyna_model.learn_from(
-                max_adm_step=self.max_adm_step,
-                buffer=self.dataset,
-                lr=self.model_lr,
-                batch_size=1024
-            )
+            if self.args.dyna_model in ["sadm", "adm", "rnn", "dreamer"]:
+                holdout_losses = self.dyna_model.learn_from(
+                    max_adm_step=self.max_adm_step,
+                    buffer=self.dataset,
+                    lr=self.model_lr,
+                    batch_size=1024
+                )
+            elif self.args.dyna_model == "en":
+                holdout_losses = self.dyna_model.learn_from(
+                    buffer=self.dataset,
+                    lr=self.model_lr,
+                    batch_size=1024
+                )
             self._save({})
             with open(os.path.join(self.record_dir, "model_record_seed-{}.txt".format(self.seed)), "w") as f:
                 json.dump({"model_loss": holdout_losses}, f)

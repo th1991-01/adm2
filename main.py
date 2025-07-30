@@ -18,10 +18,12 @@ def get_args():
     parser.add_argument("--env-name", type=str, default="hopper-medium-v2")
     
     # dynamics model parameters
-    # "sadm" -- our proposed self-transition any-step dynamics model
+    # "sadm" -- our proposed any-step dynamics model v2
     # "adm"  -- original any-step dynamics model
     # "en"   -- ensemble dynamics model
-    parser.add_argument("--dyna-model", type=str, default="sadm", choices=["sadm", "adm", "en"])
+    # "rnn"  -- RNN dynamics model
+    # "dreamer"
+    parser.add_argument("--dyna-model", type=str, default="sadm", choices=["sadm", "adm", "en", "rnn", "dreamer"])
     parser.add_argument("--model-hidden-dim", type=int, default=200)
     parser.add_argument("--model-lr", type=float, default=3e-4)
     parser.add_argument("--rollout-batch-size", type=int, default=4096)

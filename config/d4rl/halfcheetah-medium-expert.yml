@@ -1,1 +1,9 @@
 max_adm_step: 2
+model_hidden_dim: 400
+n_starts: 2
+rollout_batch_size: 10000
+real_ratio: 0.25
+penalty_coef: 2.9
+auto_alpha: True
+deterministic_backup: True
+n_epochs: 5000
