@@ -1,3 +1,6 @@
 max_adm_step: 2
-n_starts: 2
 model_hidden_dim: 400
+n_starts: 2
+rollout_batch_size: 4096
+penalty_coef: 5
+n_epochs: 3000
