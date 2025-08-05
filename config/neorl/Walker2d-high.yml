@@ -1,6 +1,8 @@
 max_adm_step: 5
+n_starts: 5
+rollout_batch_size: 2048
+real_ratio: 0.1
+penalty_coef: 3
 auto_alpha: False
 alpha: 0.4
-real_ratio: 0.1
-rollout_batch_size: 2048
-penalty_coef: 3
+n_epochs: 3000
