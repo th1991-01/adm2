@@ -22,7 +22,7 @@ def get_args():
     # "adm"  -- original any-step dynamics model
     # "en"   -- ensemble dynamics model
     # "rnn"  -- RNN dynamics model
-    # "dreamer"
+    # "dreamer" -- Dreamer dynamics model
     parser.add_argument("--dyna-model", type=str, default="sadm", choices=["sadm", "adm", "en", "rnn", "dreamer"])
     parser.add_argument("--model-hidden-dim", type=int, default=200)
     parser.add_argument("--model-lr", type=float, default=3e-4)
