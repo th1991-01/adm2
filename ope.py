@@ -26,7 +26,7 @@ def get_args():
     parser.add_argument("--dyna-model", type=str, default="sadm", choices=["sadm", "adm", "en", "rnn", "dreamer"])
     parser.add_argument("--model-hidden-dim", type=int, default=200)
     parser.add_argument("--rollout-length", type=int, default=1000)
-    parser.add_argument("--given-reward", type=bool, default=True)
+    parser.add_argument("--given-reward", type=bool, default=False)
     parser.add_argument("--load-label", type=str, default="sadm-sac")
     parser.add_argument("--load-time", type=str, default="25-0629-102410")
     parser.add_argument("--load-seed", type=int, default=0)
