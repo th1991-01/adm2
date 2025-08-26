@@ -11,8 +11,11 @@ from tqdm import tqdm
 
 from dynamics.adm_dynamics import ADMDynamics
 from dynamics.sadm_dynamics import SADMDynamics
+from dynamics.ensemble_dynamics import EnsembleDynamics
+from dynamics.rnn_dynamics import RNNDynamics
+from dynamics.dreamer_dynamics import DreamerDynamics
 from components.static_fns import STATICFUNC
-from env.model_as_sim import ADMSim, SADMSim
+from env.model_as_sim import ADMSim, SADMSim, EnSim, RNNSim
 from buffer.buffer4seqsamp import ReplayBufferForSeqSampling
 from dope_policies import DOPE_POLICY_PATH, DOPEPolicy
 
@@ -78,6 +81,31 @@ class OPERunner:
                 device=args.device
             )
             self.ModelSim = SADMSim
+        elif args.dyna_model == "en":
+            self.dyna_model = EnsembleDynamics(
+                obs_dim=np.prod(args.obs_shape),
+                action_dim=args.action_dim,
+                device=args.device
+            )
+            self.ModelSim = EnSim
+        elif args.dyna_model == "rnn":
+            self.dyna_model = RNNDynamics(
+                obs_dim=np.prod(args.obs_shape),
+                action_dim=args.action_dim,
+                hidden_dim=args.model_hidden_dim,
+                max_adm_step=args.max_adm_step,
+                device=args.device
+            )
+            self.ModelSim = RNNSim
+        elif args.dyna_model == "dreamer":
+            self.dyna_model = DreamerDynamics(
+                obs_dim=np.prod(args.obs_shape),
+                action_dim=args.action_dim,
+                hidden_dim=args.model_hidden_dim,
+                max_adm_step=args.max_adm_step,
+                device=args.device
+            )
+            self.ModelSim = RNNSim
             
         # load dynamics model
         self.load_dir = f"./result/{args.env}/{args.env_name}/{args.load_label}/{self.load_time}/model"
@@ -102,6 +130,7 @@ class OPERunner:
         self.max_adm_step = args.max_adm_step
         self.n_starts = min(args.max_adm_step, args.n_starts)
         self.rollout_length = args.rollout_length
+        self.given_reward = args.given_reward
         self.device = args.device
         self.seed = args.seed
         
@@ -119,7 +148,8 @@ class OPERunner:
             max_steps=self.rollout_length,
             init_obs_seqs=eval_init_seqs["s"],
             init_act_seqs=eval_init_seqs["a"],
-            n_parallels=self.n_trajs
+            n_parallels=self.n_trajs,
+            given_reward=self.given_reward
         )
         
         # init records
