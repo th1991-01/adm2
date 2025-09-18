@@ -57,19 +57,35 @@ class ReplayBuffer:
 
     def load_dataset(self, dataset, rew_bias=0.0):
         """ load dataset """
-        N = dataset["rewards"].shape[0]
-        if self.capacity < N:
-            self.capacity = N
-            self.reset()
+        if "next_observations" in dataset:
+            N = dataset["rewards"].shape[0]
+            if self.capacity < N:
+                self.capacity = N
+                self.reset()
+                
+            self.memory["s"][:N] = torch.as_tensor(dataset["observations"], dtype=torch.float32, device=self.device)
+            self.memory["a"][:N] = torch.as_tensor(dataset["actions"], dtype=torch.float32, device=self.device)
+            self.memory["r"][:N] = torch.as_tensor(dataset["rewards"], dtype=torch.float32, device=self.device).reshape(-1, 1) + rew_bias
+            self.memory["s_"][:N] = torch.as_tensor(dataset["next_observations"], dtype=torch.float32, device=self.device)
+            self.memory["done"][:N] = torch.as_tensor(dataset["terminals"], dtype=torch.float32, device=self.device).reshape(-1, 1)
+            self.memory["timeout"][:N] = torch.as_tensor(dataset["timeouts"], dtype=torch.float32, device=self.device).reshape(-1, 1)
+            self.cnt = N
+            self.size = N
             
-        self.memory["s"][:N] = torch.as_tensor(dataset["observations"], dtype=torch.float32, device=self.device)
-        self.memory["a"][:N] = torch.as_tensor(dataset["actions"], dtype=torch.float32, device=self.device)
-        self.memory["r"][:N] = torch.as_tensor(dataset["rewards"], dtype=torch.float32, device=self.device).reshape(-1, 1) + rew_bias
-        self.memory["s_"][:N] = torch.as_tensor(dataset["next_observations"], dtype=torch.float32, device=self.device)
-        self.memory["done"][:N] = torch.as_tensor(dataset["terminals"], dtype=torch.float32, device=self.device).reshape(-1, 1)
-        self.memory["timeout"][:N] = torch.as_tensor(dataset["timeouts"], dtype=torch.float32, device=self.device).reshape(-1, 1)
-        self.cnt = N
-        self.size = N
+        else:
+            N = dataset["rewards"].shape[0] - 1
+            if self.capacity < N:
+                self.capacity = N
+                self.reset()
+                
+            self.memory["s"][:N] = torch.as_tensor(dataset["observations"][:N], dtype=torch.float32, device=self.device)
+            self.memory["a"][:N] = torch.as_tensor(dataset["actions"][:N], dtype=torch.float32, device=self.device)
+            self.memory["r"][:N] = torch.as_tensor(dataset["rewards"][:N], dtype=torch.float32, device=self.device).reshape(-1, 1) + rew_bias
+            self.memory["s_"][:N] = torch.as_tensor(dataset["observations"][1:N+1], dtype=torch.float32, device=self.device)
+            self.memory["done"][:N] = torch.as_tensor(dataset["terminals"][:N], dtype=torch.float32, device=self.device).reshape(-1, 1)
+            self.memory["timeout"][:N] = torch.as_tensor(dataset["timeouts"][:N], dtype=torch.float32, device=self.device).reshape(-1, 1)
+            self.cnt = N
+            self.size = N
 
     def load_neorl_dataset(self, dataset, rew_bias=0.0):
         """ load neorl dataset """
