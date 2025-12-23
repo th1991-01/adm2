@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from .sadm import SADModel
+from .adm2 import ADM2
 
 def soft_clamp(x : torch.Tensor, _min=None, _max=None):
     # clamp tensor values while maintaining the gradient
@@ -16,8 +16,8 @@ def soft_clamp(x : torch.Tensor, _min=None, _max=None):
         x = _min + F.softplus(x - _min)
     return x
 
-class SADMDynamics(nn.Module):
-    """ Self-transition Any-step Dynamics """
+class ADM2Dynamics(nn.Module):
+    """ ADM2 Dynamics """
 
     def __init__(
         self,
@@ -35,7 +35,7 @@ class SADMDynamics(nn.Module):
         self.max_adm_step = max_adm_step
         self.device = device
 
-        self.model = SADModel(
+        self.model = ADM2(
             obs_dim=obs_dim,
             action_dim=action_dim,
             hidden_dim=hidden_dim,

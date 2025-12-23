@@ -6,12 +6,12 @@ import numpy as np
 from tqdm import tqdm
 
 from dynamics.adm_dynamics import ADMDynamics
-from dynamics.sadm_dynamics import SADMDynamics
+from dynamics.adm2_dynamics import ADM2Dynamics
 from dynamics.ensemble_dynamics import EnsembleDynamics
 from dynamics.rnn_dynamics import RNNDynamics
 from dynamics.dreamer_dynamics import DreamerDynamics
 from components.static_fns import STATICFUNC
-from env.model_as_sim import ADMSim, SADMSim, EnSim, RNNSim
+from env.model_as_sim import ADMSim, ADM2Sim, EnSim, RNNSim
 from agent.sac import SACAgent
 from agent.td3 import TD3Agent
 from agent.ppo import PPOAgent
@@ -35,7 +35,6 @@ class ModelSimTrainer(BASETrainer):
         # init dynamics model
         task = args.env_name.split('-')[0]
         if args.env == "neorl": task = "neorl-" + task
-        if args.env == "maze": task = task + "-" + args.env_name.split('-')[1]
         self.static_fn = STATICFUNC[task.lower()]
         if args.dyna_model == "adm":
             self.dyna_model = ADMDynamics(
@@ -46,15 +45,15 @@ class ModelSimTrainer(BASETrainer):
                 device=args.device
             )
             self.ModelSim = ADMSim
-        elif args.dyna_model == "sadm":
-            self.dyna_model = SADMDynamics(
+        elif args.dyna_model == "adm2":
+            self.dyna_model = ADM2Dynamics(
                 obs_dim=np.prod(args.obs_shape),
                 action_dim=args.action_dim,
                 hidden_dim=args.model_hidden_dim,
                 max_adm_step=args.max_adm_step,
                 device=args.device
             )
-            self.ModelSim = SADMSim
+            self.ModelSim = ADM2Sim
         elif args.dyna_model == "en":
             self.dyna_model = EnsembleDynamics(
                 obs_dim=np.prod(args.obs_shape),
@@ -159,7 +158,7 @@ class ModelSimTrainer(BASETrainer):
             action_dim=args.action_dim,
             device=args.device,
         )
-        rew_bias = 1 if args.env == "maze" else 0
+        rew_bias = 0.0
         if args.env == "neorl":
             dataset, _ = self.env.get_dataset(data_type=args.data_type, train_num=1000, need_val=False)
             self.dataset.load_neorl_dataset(dataset, rew_bias)
@@ -205,7 +204,7 @@ class ModelSimTrainer(BASETrainer):
             self.dyna_model.load_state_dict(state_dict)
         else:
             # learn dynamics model
-            if self.args.dyna_model in ["sadm", "adm", "rnn", "dreamer"]:
+            if self.args.dyna_model in ["adm2", "adm", "rnn", "dreamer"]:
                 holdout_losses = self.dyna_model.learn_from(
                     max_adm_step=self.max_adm_step,
                     buffer=self.dataset,

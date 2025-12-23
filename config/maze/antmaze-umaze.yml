@@ -1,5 +1,0 @@
-max_arm_step: 5
-penalty_coef: 25
-auto_alpha: False
-alpha: 0.05
-n_epochs: 2000

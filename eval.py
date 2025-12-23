@@ -18,18 +18,18 @@ def get_args():
     parser.add_argument("--env-name", type=str, default="hopper-medium-v2")
     
     # dynamics model parameters
-    # "sadm" -- our proposed self-transition any-step dynamics model
+    # "adm2" -- our proposed any-step dynamics model (ADM-v2)
     # "adm"  -- original any-step dynamics model
     # "en"   -- ensemble dynamics model
-    parser.add_argument("--dyna-model", type=str, default="sadm", choices=["sadm", "adm", "en"])
+    parser.add_argument("--dyna-model", type=str, default="adm2", choices=["adm2", "adm", "en"])
     parser.add_argument("--model-hidden-dim", type=int, default=200)
     parser.add_argument("--rollout-length", type=int, default=1000)
     parser.add_argument("--given-reward", type=bool, default=True)
-    parser.add_argument("--load-label", type=str, default="sadm-sac")
+    parser.add_argument("--load-label", type=str, default="adm2-sac")
     parser.add_argument("--load-time", type=str, default="25-0521-094857")
     parser.add_argument("--load-seed", type=int, default=0)
     parser.add_argument("--max-adm-step", type=int, default=5)                          # maximum length of rnn input
-    # only for sadm
+    # only for adm2
     parser.add_argument("--n-starts", type=int, default=5)
 
     # policy parameters

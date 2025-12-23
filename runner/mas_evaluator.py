@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 
 from dynamics.mujoco_oracle_dynamics import MujocoOracleDynamics
 from dynamics.adm_dynamics import ADMDynamics
-from dynamics.sadm_dynamics import SADMDynamics
+from dynamics.adm2_dynamics import ADM2Dynamics
 from components.static_fns import STATICFUNC
-from env.model_as_sim import ADMSim, SADMSim
+from env.model_as_sim import ADMSim, ADM2Sim
 from agent.sac import SACAgent
 from agent.td3 import TD3Agent
 from agent.ppo import PPOAgent
@@ -64,7 +64,6 @@ class ModelSimEvaluator:
         # init dynamics model
         task = args.env_name.split('-')[0]
         if args.env == "neorl": task = "neorl-" + task
-        if args.env == "maze": task = task + "-" + args.env_name.split('-')[1]
         self.static_fn = STATICFUNC[task.lower()]
         if args.dyna_model == "adm":
             self.dyna_model = ADMDynamics(
@@ -75,15 +74,15 @@ class ModelSimEvaluator:
                 device=args.device
             )
             self.ModelSim = ADMSim
-        elif args.dyna_model == "sadm":
-            self.dyna_model = SADMDynamics(
+        elif args.dyna_model == "adm2":
+            self.dyna_model = ADM2Dynamics(
                 obs_dim=np.prod(args.obs_shape),
                 action_dim=args.action_dim,
                 hidden_dim=args.model_hidden_dim,
                 max_adm_step=args.max_adm_step,
                 device=args.device
             )
-            self.ModelSim = SADMSim
+            self.ModelSim = ADM2Sim
             
         # load dynamics model
         self.load_dir = f"./result/{args.env}/{args.env_name}/{args.load_label}/{self.load_time}/model"
@@ -154,7 +153,7 @@ class ModelSimEvaluator:
             obs_shape=args.obs_shape,
             action_dim=args.action_dim
         )
-        rew_bias = 1 if args.env == "maze" else 0
+        rew_bias = 0.0
         if args.env == "neorl":
             dataset, _ = self.env.get_dataset(data_type=args.data_type, train_num=1000, need_val=False)
             self.dataset.load_neorl_dataset(dataset, rew_bias)

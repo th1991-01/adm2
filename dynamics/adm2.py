@@ -38,8 +38,8 @@ class ResBlock(nn.Module):
             y = self.layer_norm(y)
         return y
 
-class SADModel(nn.Module):
-    """ Self-transition Any-step Dynamics Model (SADM) """
+class ADM2(nn.Module):
+    """ ADM2 """
 
     def __init__(
         self,

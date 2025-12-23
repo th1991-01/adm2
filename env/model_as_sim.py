@@ -91,7 +91,7 @@ class ADMSim(gym.Env):
         return next_obs, reward, uncertainty, terminated, truncated
         
         
-class SADMSim(ADMSim):
+class ADM2Sim(ADMSim):
     
     def __init__(
         self,
