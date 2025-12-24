@@ -15,7 +15,7 @@ def get_args():
 
     # environment settings
     parser.add_argument("--env", type=str, default="d4rl")
-    parser.add_argument("--env-name", type=str, default="hopper-medium-v2")
+    parser.add_argument("--env-name", type=str, default="walker2d-medium-v2")
     
     # dynamics model parameters
     # "adm2" -- our proposed any-step dynamics model (ADM-v2)
