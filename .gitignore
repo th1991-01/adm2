@@ -5,7 +5,6 @@
 **/build
 **/dist
 **/*.egg-info
-**/*.txt
 **/.vscode
 **/_log
 result/
