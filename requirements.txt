@@ -1,8 +1,8 @@
-cython==0.29.21
+cython==0.29.37
 gym==0.23.1
 gymnasium==0.29.1
 mujoco==3.1.1
-mujoco-py==2.1.2
+mujoco-py==2.1.2.14
 matplotlib==3.8.2
 numpy==1.26.3
 PyYAML==6.0.1

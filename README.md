@@ -6,6 +6,21 @@ This is the code for the paper [ADM-v2: Pursuing Full-Horizon Roll-out in Dynami
 
 ## Requirements
 
+"""
+pyenv local 3.10
+python -m venv .venv
+source .venv/bin/activate
+
+pip install -r requirements.txt
+pip install git+https://github.com/Farama-Foundation/d4rl@master#egg=d4rl
+pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2   --index-url https://download.pytorch.org/whl/cu118
+
+cd ../
+git clone https://github.com/Polixir/neorl
+pip install -e .
+pip install numpy==1.26.4
+"""
+
 To install all the required dependencies:
 
 1. Install MuJoCo engine, which can be downloaded from [here](https://mujoco.org/download).
