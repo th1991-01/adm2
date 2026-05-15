@@ -7,6 +7,10 @@ This is the code for the paper [ADM-v2: Pursuing Full-Horizon Roll-out in Dynami
 ## Requirements
 
 ```
+cd ~
+git clone https://github.com/th1991-01/adm2
+cd adm2
+
 pyenv local 3.10
 python -m venv .venv
 source .venv/bin/activate
