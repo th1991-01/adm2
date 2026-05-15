@@ -21,6 +21,7 @@ pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2   --index-url htt
 
 cd ../
 git clone https://github.com/Polixir/neorl
+cd neorl
 pip install -e .
 pip install numpy==1.26.4
 ```
