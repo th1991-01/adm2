@@ -6,7 +6,7 @@ This is the code for the paper [ADM-v2: Pursuing Full-Horizon Roll-out in Dynami
 
 ## Requirements
 
-"""
+```
 pyenv local 3.10
 python -m venv .venv
 source .venv/bin/activate
@@ -19,7 +19,7 @@ cd ../
 git clone https://github.com/Polixir/neorl
 pip install -e .
 pip install numpy==1.26.4
-"""
+```
 
 To install all the required dependencies:
 
