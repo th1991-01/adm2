@@ -16,6 +16,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
+pip install patchelf
 pip install git+https://github.com/Farama-Foundation/d4rl@master#egg=d4rl
 pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2   --index-url https://download.pytorch.org/whl/cu118
 
